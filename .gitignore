@@ -1,0 +1,4 @@
+.env
+newvenv
+__pycache__
+.idea
