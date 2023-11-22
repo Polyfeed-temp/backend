@@ -2,11 +2,11 @@
 from enum import Enum
 
 class AnnotationTag(Enum):
-    Strength = 'strength'
-    Weakness = 'weakness'
-    ActionItem = 'action item'
-    Confused = 'confused'
-    Other = 'other'
+    Strength = 'Strength'
+    Weakness = 'Weakness'
+    ActionItem = 'Action Item'
+    Confused = 'Confused'
+    Other = 'Other'
 
 class ActionPointCategory(Enum):
     FurtherPractice = 'further practice'

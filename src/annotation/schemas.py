@@ -13,19 +13,25 @@ class DomMeta(BaseModel):
 
 class HighlightPydantic(BaseModel):
     id: UUID4
-    start_meta: DomMeta
-    end_meta: DomMeta
+    startMeta: DomMeta
+    endMeta: DomMeta
     text: str
     url: HttpUrl
-    annotation_tag: AnnotationTag
+    annotationTag: AnnotationTag
     notes: Optional[str]
+
+class FeedbackHighlightPydantic(BaseModel):
+    unitCode: str
+    assignment: str
+    annotation: HighlightPydantic
+
 
 class AnnotationActionPointPydantic(BaseModel):
     id: int
     action: str
-    actionpoint: ActionPointCategory
+    actionPoint: ActionPointCategory
     deadline: date
-    annotation_id: UUID4
+    annotationId: UUID4
 
 # Example usage of parsing JSON to Pydantic model
 # highlight_json = '{"id": "uuid", "start_meta": {...}, "end_meta": {...}, "text": "example", "url": "http://example.com", "annotation_tag": "Strength", "notes": "example notes"}'
