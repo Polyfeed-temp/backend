@@ -19,16 +19,16 @@ def create_unit(unit: UnitPydantic, db: Session = Depends(get_db)):
     return service.create_unit(db, unit)
 
 
-@router.get("/id", response_model=UnitPydantic)
+@router.get("/{unitCode}", response_model=UnitPydantic)
 def get_unit_by_id(unitCode: str, db: Session = Depends(get_db)):
     return service.get_unit_by_id(db, unitCode)
 
 
-@router.patch("/id", response_model=UnitPydantic)
+@router.patch("/{unitCode}", response_model=UnitPydantic)
 def update_unit_by_code(unitCode: str, unit: UnitPydantic, db: Session = Depends(get_db)):
     return service.update_unit(db, unit, unitCode)
 
 
-@router.delete("/id", response_model=bool)
+@router.delete("/{unitCode}", response_model=bool)
 def delete_unit_by_code(unitCode: str, db: Session = Depends(get_db)):
     return service.delete_unit(db, unitCode)

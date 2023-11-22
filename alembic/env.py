@@ -24,12 +24,15 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from src.annotation.models import Base as AnnotationBase
-from src.user.models import Base as UserBase
-from src.unit.models import Base as UnitBase
+from src.base import get_base
+from src.user.models import User
+from src.unit.models import Unit
+from src.annotation.models import AnnotationActionPoint, Highlight
+from src.student_unit.models import StudentUnit
+from src.assessment.models import Assessment
 
 
-target_metadata = [UserBase.metadata, UnitBase.metadata, AnnotationBase.metadata]
+target_metadata = get_base().metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

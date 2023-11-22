@@ -1,8 +1,7 @@
 from sqlalchemy import Column, String, Integer
-from sqlalchemy.ext.declarative import declarative_base
+from src.base import get_base
 
-Base = declarative_base()
-
+Base = get_base()
 
 class Unit(Base):
     __tablename__ = 'UNIT'

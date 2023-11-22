@@ -1,12 +1,11 @@
 from sqlalchemy import Column, String, Integer, ForeignKey, Date, Enum, JSON, UUID, BINARY
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from .enums import AnnotationTag, ActionPointCategory
-from src.unit.models import Unit
-from sqlalchemy.dialects.mysql import BINARY
 import uuid
+from src.base import get_base
 
-Base = declarative_base()
+Base = get_base()
+
 class Highlight(Base):
     __tablename__ = 'HIGHLIGHT'
     id = Column(String(36), primary_key=True)
@@ -16,8 +15,9 @@ class Highlight(Base):
     url = Column(String(255))
     annotationTag = Column(Enum(AnnotationTag))
     notes = Column(String(255))
-    unitCode = Column(String(10), ForeignKey('src.unit.models.UNIT.unitCode'))
-    unit = relationship("src.unit.models.Unit")
+    unitCode = Column(String(10), ForeignKey('UNIT.unitCode'))
+    unit = relationship("Unit")
+    studentId = Column(Integer, ForeignKey('USER.id'))
 
 class AnnotationActionPoint(Base):
     __tablename__ = 'ACTION'
