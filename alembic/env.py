@@ -26,9 +26,10 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 from src.annotation.models import Base as AnnotationBase
 from src.user.models import Base as UserBase
+from src.unit.models import Base as UnitBase
 
 
-target_metadata = [AnnotationBase.metadata, UserBase.metadata]
+target_metadata = [UserBase.metadata, UnitBase.metadata, AnnotationBase.metadata]
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

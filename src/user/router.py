@@ -22,3 +22,13 @@ def create_user(user: UserPydantic, db: Session = Depends(get_db)):
 @router.get("/id", response_model=UserPydantic)
 def get_user_by_id(id_num: int, db: Session = Depends(get_db)):
     return service.get_user_by_id(db, id_num)
+
+
+@router.patch("/id", response_model=UserPydantic)
+def update_user_by_id(id_num: int, user: UserPydantic, db: Session = Depends(get_db)):
+    return service.update_user(db, user, id_num)
+
+
+@router.delete("/id", response_model=bool)
+def delete_user_by_id(id_num: int, db: Session = Depends(get_db)):
+    return service.delete_user(db, id_num)

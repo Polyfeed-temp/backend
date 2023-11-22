@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, Enum
 from sqlalchemy.ext.declarative import declarative_base
+from .enums import Role
 
 Base = declarative_base()
 
@@ -13,3 +14,4 @@ class User(Base):
     email = Column(String(255))
     lastName = Column(String(255))
     firstName = Column(String(255))
+    role = Column(Enum(Role))
