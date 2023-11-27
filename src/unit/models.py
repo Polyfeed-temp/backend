@@ -1,12 +1,10 @@
-from sqlalchemy import Column, String, Integer
+from sqlalchemy import Column, String, Integer, Table
+from src.database import engine
 from src.base import get_base
 
 Base = get_base()
 
 class Unit(Base):
-    __tablename__ = 'UNIT'
-    unitCode = Column(String(10), primary_key=True)
-    unitName = Column(String(255))
-    offering = Column(String(255))
+    __table__ = Table("UNIT", Base.metadata, autoload_with=engine)
 
 # offering example: S2 2023

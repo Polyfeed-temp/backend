@@ -13,10 +13,9 @@ def get_users(db: Session = Depends(get_db)):
     return service.get_users(db)
 
 
-@router.post("/", response_model=UserPydantic)
-def create_user(user: UserPydantic, db: Session = Depends(get_db)):
-    print(user)
-    return service.create_user(db, user)
+@router.post("/signup", response_model=UserPydantic)
+def signup(user: UserPydantic, db: Session = Depends(get_db)):
+    return service.signup_user(db, user)
 
 
 @router.get("/{id_num}", response_model=UserPydantic)
