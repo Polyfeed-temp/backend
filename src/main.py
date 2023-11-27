@@ -9,15 +9,18 @@ from src.login import router as login_router
 from src.openai import router as openai_router
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.config import Config
-from fastapi.security import OAuth2PasswordBearer
+from src.dependencies import oauth2_scheme
 
 config = Config('.env')
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login/token")
+
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cast=str))
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
+app.add_middleware(CORSMiddleware,  allow_origins=["http://localhost:3000"],  # Adjust to your client's origin
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type","Set-Cookie", "Authorization"])
 app.include_router(annotation_router.router, prefix="/api/annotation", tags=["annotation"], dependencies=[Depends(oauth2_scheme)])
 app.include_router(user_router.router, prefix="/api/user", tags=["user"])
 app.include_router(unit_router.router, prefix="/api/unit", tags=["unit"])
