@@ -1,7 +1,7 @@
-from sqlalchemy import Column, String, Integer, Enum, Table
-from .enums import Role
-from src.database import engine
+from sqlalchemy import Table
+
 from src.base import get_base
+from src.database import engine
 
 Base = get_base()
 

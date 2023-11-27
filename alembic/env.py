@@ -28,7 +28,7 @@ from src.base import get_base
 from src.user.models import User
 from src.unit.models import Unit
 from src.annotation.models import AnnotationActionPoint, Highlight
-from src.student_unit.models import StudentUnit
+from src.enrollment.models import Enrollment
 from src.assessment.models import Assessment
 
 

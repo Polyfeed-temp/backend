@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
+
 from .models import Unit
 from .schemas import UnitPydantic
-import json
 
 
 def get_unit_by_id(db: Session, unitCode: str):

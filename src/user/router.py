@@ -18,16 +18,16 @@ def signup(user: UserPydantic, db: Session = Depends(get_db)):
     return service.signup_user(db, user)
 
 
-@router.get("/{id_num}", response_model=UserPydantic)
-def get_user_by_id(id_num: int, db: Session = Depends(get_db)):
-    return service.get_user_by_id(db, id_num)
+@router.get("/{email}", response_model=UserPydantic)
+def get_user_by_email(email: str, db: Session = Depends(get_db)):
+    return service.get_user_by_email(db, email)
 
 
-@router.patch("/{id_num}", response_model=UserPydantic)
-def update_user_by_id(id_num: int, user: UserPydantic, db: Session = Depends(get_db)):
-    return service.update_user(db, user, id_num)
+@router.patch("/{email}", response_model=UserPydantic)
+def update_user_by_email(email: str, user: UserPydantic, db: Session = Depends(get_db)):
+    return service.update_user(db, user, email)
 
 
-@router.delete("/{id_num}", response_model=bool)
-def delete_user_by_id(id_num: int, db: Session = Depends(get_db)):
-    return service.delete_user(db, id_num)
+@router.delete("/{email}", response_model=bool)
+def delete_user_by_id(email: str, db: Session = Depends(get_db)):
+    return service.delete_user(db, email)

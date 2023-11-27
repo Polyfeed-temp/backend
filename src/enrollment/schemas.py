@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class AssessmentPydantic(BaseModel):
+class EnrollmentPydantic(BaseModel):
     id: int
+    userEmail: str
     unitCode: str
-    assessmentName: str
