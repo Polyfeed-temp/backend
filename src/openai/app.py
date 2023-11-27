@@ -2,7 +2,7 @@ import os
 
 from openai import OpenAI
 
-apikey = "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"
+apikey = "api key"
 
 
 def question(role, content):
