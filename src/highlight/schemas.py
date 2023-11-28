@@ -19,5 +19,5 @@ class HighlightPydantic(BaseModel):
     text: str
     url: HttpUrl
     annotationTag: AnnotationTag
-    notes: Optional[str]
+    notes: Optional[str] = None
     feedbackId: int

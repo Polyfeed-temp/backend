@@ -3,7 +3,8 @@ from .schemas import HighlightPydantic
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.annotation import service
+from src.highlight import service
+from src.login.service import get_current_user
 
 router = APIRouter()
 
@@ -14,8 +15,8 @@ def get_highlights_url(url: str, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=HighlightPydantic)
-def create_highlight(highlight: HighlightPydantic, db: Session = Depends(get_db)):
-    print(highlight)
+def create_highlight(highlight: HighlightPydantic, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    email = user.email
     return service.create_highlight(db, highlight)
 
 

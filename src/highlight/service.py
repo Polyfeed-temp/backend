@@ -21,9 +21,11 @@ def create_highlight(db: Session, highlight_data: HighlightPydantic):
     print(highlight_data)
     start_meta = (highlight_data.startMeta.model_dump_json())
     end_meta = highlight_data.endMeta.model_dump_json()
+    #check for feedback
+
     db_highlight = Highlight(id=str(highlight_data.id), url=str(highlight_data.url), startMeta=start_meta,
-                             endMeta=end_meta, text=highlight_data.text, annotation_tag=highlight_data.annotation_tag,
-                             notes=highlight_data.notes)
+                             endMeta=end_meta, text=highlight_data.text, annotationTag=highlight_data.annotationTag.value,
+                             notes=highlight_data.notes, feedbackId=highlight_data.feedbackId)
 
     db.add(db_highlight)
     db.commit()

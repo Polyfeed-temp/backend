@@ -4,7 +4,9 @@ from sqlalchemy.orm import Session
 from .models import User
 from .schemas import UserPydantic
 from src.dependencies import get_password_hash
-from .enums import Role, Faculty
+from src.unit.models import Unit
+from src.assessment.models import Assessment
+from src.enrollment.models import Enrollment
 
 
 def get_user_by_email(db: Session, email: str, no_password: bool = True):
@@ -71,3 +73,28 @@ def delete_user(db: Session, email: str):
         return True
     else:
         return False
+
+def get_student_all_student_enrolled_units(db: Session, student_email: str):
+    # Fetch the rows
+    results = db.query(
+        Unit.unitCode,
+        Assessment.assessmentName,
+        Assessment.id
+    ).join(
+        Enrollment, Enrollment.unitCode == Unit.unitCode
+    ).join(
+        Assessment, Unit.unitCode == Assessment.unitCode
+    ).filter(
+        Enrollment.userEmail == student_email
+    ).all()
+
+    # Process the results
+    units = {}
+    for unitCode, assessmentName, assessmentId in results:
+        if unitCode not in units:
+            units[unitCode] = {'unitCode': unitCode, 'assessments': []}
+        units[unitCode]['assessments'].append({'assessmentName': assessmentName, 'id': assessmentId})
+
+    return list(units.values())
+
+

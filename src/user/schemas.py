@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -16,3 +16,9 @@ class UserPydantic(BaseModel):
     password: Optional[str]= None
     faculty: Faculty
 
+class AssessmentPydantic(BaseModel):
+    id: int
+    assessmentName: str
+class EnrolledUnitPydantic(BaseModel):
+    unitCode: str
+    assessments: List[AssessmentPydantic]
