@@ -13,6 +13,6 @@ class UserPydantic(BaseModel):
     lastName: str
     firstName: str
     role: Role
-    password: str
+    password: Optional[str]= None
     faculty: Faculty
 

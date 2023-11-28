@@ -7,8 +7,14 @@ from src.dependencies import get_password_hash
 from .enums import Role, Faculty
 
 
-def get_user_by_email(db: Session, email: str):
-    db_user = db.query(User).filter(User.email == email).all()
+def get_user_by_email(db: Session, email: str, no_password: bool = True):
+    query = db.query(User)
+    if no_password:
+        query = query.filter(User.email == email).with_entities(User.email, User.role, User.faculty, User.monashId, User.monashObjectId, User.authcate, User.lastName, User.firstName)
+    else:
+        query = query.filter(User.email == email)
+    db_user = query.all()
+
     if len(db_user) == 1:
         return db_user[0]
     else:

@@ -5,14 +5,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from fastapi import APIRouter, Request
 from typing_extensions import Annotated
-from .service import authenticate_user, create_access_token, Token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
+from .service import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, UserResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.user.schemas import UserPydantic
 
 
 router = APIRouter()
-@router.post("/token", response_model=Token)
+
+@router.post("/token", response_model=UserResponse)
 async def login_for_access_token(response: Response,form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Session = Depends(get_db),
 ):
 
@@ -29,7 +30,7 @@ async def login_for_access_token(response: Response,form_data: Annotated[OAuth2P
     )
 
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite='none')
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"user": user, "access_token": access_token}
 
 @router.get("/verifyToken", response_model=UserPydantic)
 async def verify_token(request: Request, current_user: UserPydantic = Depends(get_current_user)):

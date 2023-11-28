@@ -20,7 +20,7 @@ config = Config('.env')
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cast=str))
 
-app.add_middleware(CORSMiddleware,  allow_origins=["http://localhost:3000"],  # Adjust to your client's origin
+app.add_middleware(CORSMiddleware,  allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type","Set-Cookie", "Authorization"])
