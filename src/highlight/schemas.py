@@ -22,6 +22,9 @@ class HighlightPydantic(BaseModel):
     annotationTag: AnnotationTag
     notes: Optional[str] = None
     feedbackId: int
+    gptResponse: Optional[str] = None
 
-class HighlightWithActions(HighlightPydantic):
-    actions: List[ActionPydantic]
+class CompleteHighlight(HighlightPydantic):
+    annotation:HighlightPydantic
+    actionItems: List[ActionPydantic]
+

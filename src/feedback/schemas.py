@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from pydantic import HttpUrl
-from src.highlight.schemas import HighlightWithActions
+from src.highlight.schemas import CompleteHighlight
 
 
 class FeedbackBasePydantic(BaseModel):
@@ -17,6 +17,6 @@ class FeedbackBasePydantic(BaseModel):
     url: HttpUrl
 
 class FeedbackWithHighlights(FeedbackBasePydantic):
-    highlights: List[HighlightWithActions]
+    highlights: List[CompleteHighlight]
 
 
