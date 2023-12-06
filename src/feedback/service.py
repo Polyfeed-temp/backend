@@ -17,6 +17,7 @@ def get_feedback_summumary_by_assessment_id(assessment_id: int, db: Session):
     return db.query(Feedback).join(Highlight, Feedback.highlight_id == Highlight.id).filter(Feedback.assessment_id == assessment_id).all()
 
 def create_feedback(feedback:FeedbackBasePydantic, db: Session):
+    feedback.url = str(feedback.url)
     feedback = Feedback(**feedback.model_dump())
     db.add(feedback)
     db.commit()

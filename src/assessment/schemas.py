@@ -1,7 +1,8 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class AssessmentPydantic(BaseModel):
     id: int
-    unitCode: str
+    unitId: Optional[str] = None
     assessmentName: str

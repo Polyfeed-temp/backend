@@ -26,5 +26,5 @@ class HighlightPydantic(BaseModel):
 
 class CompleteHighlight(BaseModel):
     annotation:HighlightPydantic
-    actionItems: List[ActionPydantic]
+    actionItems: Optional[List[ActionPydantic]] = None
 

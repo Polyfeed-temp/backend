@@ -28,7 +28,7 @@ def create_highlight(db: Session, highlight_data: CompleteHighlight):
 
     db_highlight = Highlight(id=str(highlight.id), startMeta=start_meta,
                              endMeta=end_meta, text=highlight.text, annotationTag=highlight.annotationTag.value,
-                             notes=highlight.notes, feedbackId=str(highlight.feedbackId))
+                             notes=highlight.notes, feedbackId=str(highlight.feedbackId),gptResponse=highlight.gptResponse)
 
 
     db.add(db_highlight)
