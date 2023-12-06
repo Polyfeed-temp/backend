@@ -24,7 +24,7 @@ class HighlightPydantic(BaseModel):
     feedbackId: int
     gptResponse: Optional[str] = None
 
-class CompleteHighlight(HighlightPydantic):
+class CompleteHighlight(BaseModel):
     annotation:HighlightPydantic
     actionItems: List[ActionPydantic]
 

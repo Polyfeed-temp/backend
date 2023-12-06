@@ -1,8 +1,15 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import select, func
 from .models import Feedback
 from .schemas import FeedbackBasePydantic, FeedbackWithHighlights
 from src.highlight.models import Highlight
+from src.highlight.schemas import HighlightPydantic
 from src.action.models import AnnotationActionPoint
+import json
+
+from ..highlight.schemas import CompleteHighlight
+
+
 def get_feedback_by_assessment_id(assessment_id: int, db: Session):
     return db.query(Feedback).filter(Feedback.assessment_id == assessment_id).all()
 
@@ -21,31 +28,39 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
     highlights = db.query(Highlight).filter(Highlight.feedbackId == feedback_id).all()
     return highlights
 
-def get_feedback_highlights_by_url(user,url, db: Session):
-    feedback_data = (
-        db.query(Feedback, Highlight, AnnotationActionPoint)
-        .join(Highlight, Feedback.id == Highlight.feedbackId)
-        .join(Highlight.id == AnnotationActionPoint.highlightId)
-        .filter(Highlight.url == url)
-        .filter(Feedback.studentEmail == user.email)
-        .all()
-    )
 
-    # Transform the results into the desired format
-    feedback_highlights = []
-    for feedback, highlight, action_point in feedback_data:
-        feedback_dict = feedback.dict()
-        highlight_dict = highlight.dict()
+def get_feedback_highlights_by_url(user, url, db: Session):
+    print(f'url {url}')
 
-        # Assuming you have a relationship between Highlight and AnnotationActionPoint
-        action_point_dict = action_point.dict()
 
-        # Add action points to the highlight dictionary
-        highlight_dict["actionPoints"] = [action_point_dict]
+    query = (
+        db.query(Feedback, Highlight, func.concat('[', func.group_concat(
+            func.json_object(
+                'id', AnnotationActionPoint.id,
+                'action', AnnotationActionPoint.action,
+                'category', AnnotationActionPoint.category,
+                'deadline', AnnotationActionPoint.deadline
+            )
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.url == url).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
 
-        # Add highlights to the feedback dictionary
-        feedback_dict["highlights"] = [highlight_dict]
+    result = query.all()
+    feedbackHighlights =[]
+    feedback =None
+    if len(result) == 0:
+        return None
+    for row in result:
+        feedback, highlight, actionItems = row
+        print(feedback)
+        if not highlight:
+            break
 
-        feedback_highlights.append(feedback_dict)
+        temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
+        if actionItems:
+            complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
+        feedbackHighlights.append(complete_highlight)
 
-    return feedback_highlights
+
+
+    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail,
+            "mark": feedback.mark,"highlights":feedbackHighlights}
+
