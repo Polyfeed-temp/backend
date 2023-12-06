@@ -1,13 +1,13 @@
 from datetime import date
-
+from typing import Optional
 from pydantic import BaseModel, UUID4
 
 from .enums import ActionPointCategory
 
 
 class ActionPydantic(BaseModel):
-    id: int
+    id: Optional[int] = None
     action: str
     category: ActionPointCategory
     deadline: date
-    highlightId: UUID4
+    highlightId: Optional[UUID4] = None

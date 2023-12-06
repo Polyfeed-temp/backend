@@ -8,6 +8,6 @@ from src.openai import service
 
 router = APIRouter()
 
-router.post("/explain_further", response_model=ExplainFutherContentPydantic)
+@router.post("/explain", response_model=ExplainFutherContentPydantic)
 def explain_further(content:ExplainFutherContentPydantic):
-    return service.explain_further(content)
+    return service.explain_further(content.content)

@@ -3,7 +3,9 @@ import json
 from sqlalchemy.orm import Session
 
 from .models import Highlight
-from .schemas import DomMeta, HighlightPydantic
+from .schemas import DomMeta, HighlightPydantic, CompleteHighlight
+from src.action.models import AnnotationActionPoint
+
 
 localDatabase = []
 
@@ -17,20 +19,30 @@ def get_highlights_by_url(db: Session, url: str):
     return db_highlights
 
 
-def create_highlight(db: Session, highlight_data: HighlightPydantic):
-    print(highlight_data)
-    start_meta = (highlight_data.startMeta.model_dump_json())
-    end_meta = highlight_data.endMeta.model_dump_json()
+def create_highlight(db: Session, highlight_data: CompleteHighlight):
+
+    highlight = highlight_data.annotation
+    start_meta = (highlight.startMeta.model_dump_json())
+    end_meta = highlight.endMeta.model_dump_json()
     #check for feedback
 
-    db_highlight = Highlight(id=str(highlight_data.id), url=str(highlight_data.url), startMeta=start_meta,
-                             endMeta=end_meta, text=highlight_data.text, annotationTag=highlight_data.annotationTag.value,
-                             notes=highlight_data.notes, feedbackId=highlight_data.feedbackId)
+    db_highlight = Highlight(id=str(highlight.id), startMeta=start_meta,
+                             endMeta=end_meta, text=highlight.text, annotationTag=highlight.annotationTag.value,
+                             notes=highlight.notes, feedbackId=str(highlight.feedbackId))
+
 
     db.add(db_highlight)
+
+    db.commit()
+
+    if highlight_data.actionItems:
+        for action in highlight_data.actionItems:
+            db_action= AnnotationActionPoint(action=action.action, category=action.category.value, deadline=action.deadline, highlightId=str(highlight.id) )
+            db.add(db_action)
+
     db.commit()
     db.refresh(db_highlight)
-    return highlight_data
+
 
 
 def get_highlights(db: Session):
