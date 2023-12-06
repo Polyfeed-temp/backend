@@ -1,7 +1,9 @@
 from sqlalchemy.orm import Session
-
+from sqlalchemy import func
 from .models import Unit
+from src.assessment.models import Assessment
 from .schemas import UnitPydantic
+import json
 
 
 def get_unit_by_id(db: Session, unitCode: str):
@@ -45,3 +47,33 @@ def delete_unit(db: Session, unitCode: str):
         return True
     else:
         return False
+def get_all_units_with_assessments(db):
+
+    subquery = (
+        db.query(func.concat('[', func.group_concat(
+            func.json_object('assessmentName', Assessment.assessmentName, 'id', Assessment.id)
+        ), ']'))
+        .filter(Unit.unitId == Assessment.unitId)
+        .correlate(Unit)
+        .as_scalar()
+    )
+
+    query = (
+        db.query(
+            func.json_object('id', Unit.unitId, 'unitCode', Unit.unitCode, 'year', Unit.year, 'semester', Unit.semester).label('Unit'),
+            subquery.label('concatenated_assessments')
+        )
+        .group_by(Unit.unitId)
+    )
+
+    result = query.all()
+    all_units=[]
+    # Process the result as needed
+    for unit_data in result:
+        unit, assessments = unit_data
+        unit_dict =json.loads(unit)
+        if assessments:
+            unit_dict['assessments'] = json.loads(assessments)
+            print(unit_dict)
+        all_units.append(unit_dict)
+    return all_units
