@@ -4,6 +4,7 @@ from .models import Unit
 from src.assessment.models import Assessment
 from .schemas import UnitPydantic
 import json
+from src.database import unit as cached_units_data
 
 
 def get_unit_by_id(db: Session, unitCode: str):
@@ -48,7 +49,9 @@ def delete_unit(db: Session, unitCode: str):
     else:
         return False
 def get_all_units_with_assessments(db):
-
+    global cached_units_data
+    if cached_units_data.get_data():
+        return cached_units_data.get_data()
     subquery = (
         db.query(func.concat('[', func.group_concat(
             func.json_object('assessmentName', Assessment.assessmentName, 'id', Assessment.id)
@@ -76,4 +79,6 @@ def get_all_units_with_assessments(db):
             unit_dict['assessments'] = json.loads(assessments)
             print(unit_dict)
         all_units.append(unit_dict)
+
+    cached_units_data.insert_data(all_units)
     return all_units

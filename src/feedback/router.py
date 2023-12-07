@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.login.service import get_current_user
-from .service import create_feedback,get_feedback_highlights_by_url
+from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights
 from .schemas import FeedbackBasePydantic, FeedbackWithHighlights
 
 
@@ -25,3 +25,9 @@ def get_feedback_highlights_by_url_route( url, db: Session = Depends(get_db), us
         raise HTTPException(status_code=404, detail="Feedback not found")
     return feedback
 
+@router.get("/all")
+def get_all_user_feedback_highlights_route(db: Session = Depends(get_db), user = Depends(get_current_user)):
+    feedback = get_all_user_feedback_highlights(user, db)
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return feedback

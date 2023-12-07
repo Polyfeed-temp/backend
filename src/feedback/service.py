@@ -6,8 +6,7 @@ from src.highlight.models import Highlight
 from src.highlight.schemas import HighlightPydantic
 from src.action.models import AnnotationActionPoint
 import json
-
-from ..highlight.schemas import CompleteHighlight
+from src.database import unit as unit_temp
 
 
 def get_feedback_by_assessment_id(assessment_id: int, db: Session):
@@ -65,3 +64,47 @@ def get_feedback_highlights_by_url(user, url, db: Session):
     return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail,
             "mark": feedback.mark,"highlights":feedbackHighlights}
 
+def get_all_user_feedback_highlights(user, db: Session):
+    cached_units_data = unit_temp.get_data()
+    query = (
+        db.query(Feedback, Highlight, func.concat('[', func.group_concat(
+            func.json_object(
+                'id', AnnotationActionPoint.id,
+                'action', AnnotationActionPoint.action,
+                'category', AnnotationActionPoint.category,
+                'deadline', AnnotationActionPoint.deadline
+            )
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
+
+    result = query.all()
+    feedbackHighlights =[]
+    feedbacks_dict={}
+    if len(result) == 0:
+        return None
+    for row in result:
+        feedback, highlight, actionItems = row
+        if feedback.id not in feedbacks_dict:
+            feedbacks_dict[feedback.id] = {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
+         "studentEmail": feedback.studentEmail,
+         "mark": feedback.mark, "highlights": []}
+
+            if cached_units_data:
+                for unit_data in cached_units_data:
+                    assessments = unit_data.get('assessments')
+                    if assessments:
+                        for assessment in assessments:
+                            if assessment['id'] == feedback.assessmentId:
+                                feedbacks_dict[feedback.id]['unitCode'] = unit_data['unitCode'] +unit_data['year'] + unit_data['semester']
+                                feedbacks_dict[feedback.id]['assessmentName'] = assessment['assessmentName']
+
+                                break
+        if not highlight:
+            break
+
+        temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
+        if actionItems:
+            complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
+            feedbacks_dict[feedback.id]['highlights'].append(complete_highlight)
+
+    feedbacks_list = list(feedbacks_dict.values())
+    return feedbacks_list
