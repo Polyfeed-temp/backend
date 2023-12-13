@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from .models import Feedback
+from src.unit.service import get_all_units_with_assessments
 from .schemas import FeedbackBasePydantic, FeedbackWithHighlights
 from src.highlight.models import Highlight
 from src.highlight.schemas import HighlightPydantic
@@ -66,6 +67,8 @@ def get_feedback_highlights_by_url(user, url, db: Session):
 
 def get_all_user_feedback_highlights(user, db: Session):
     cached_units_data = unit_temp.get_data()
+    if not cached_units_data:
+        cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -83,25 +86,36 @@ def get_all_user_feedback_highlights(user, db: Session):
         return None
     for row in result:
         feedback, highlight, actionItems = row
-        if feedback.id not in feedbacks_dict:
-            feedbacks_dict[feedback.id] = {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
-         "studentEmail": feedback.studentEmail,
-         "mark": feedback.mark, "highlights": []}
+        feedback_entry = feedbacks_dict.setdefault(feedback.id, {
+            "id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
+            "studentEmail": feedback.studentEmail, "mark": feedback.mark, "highlights": []
+        })
 
-            if cached_units_data:
-                for unit_data in cached_units_data:
-                    assessments = unit_data.get('assessments')
-                    if assessments:
-                        for assessment in assessments:
-                            if assessment['id'] == feedback.assessmentId:
-                                feedbacks_dict[feedback.id]['unitCode'] = unit_data['unitCode'] +unit_data['year'] + unit_data['semester']
-                                feedbacks_dict[feedback.id]['assessmentName'] = assessment['assessmentName']
+        if cached_units_data:
+            for unit_data in cached_units_data:
+                assessments = unit_data.get('assessments')
+                if assessments:
+                    for assessment in assessments:
+                        if assessment['id'] == feedback.assessmentId:
+                            feedbacks_dict[feedback.id]['unitCode'] = unit_data['unitCode'] +unit_data['year'] + unit_data['semester']
+                            feedbacks_dict[feedback.id]['assessmentName'] = assessment['assessmentName']
 
-                                break
-        if not highlight:
-            break
+                            break
 
-        temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
+        if highlight:
+            highlight_data = HighlightPydantic(
+                id=highlight.id, startMeta=json.loads(highlight.startMeta),
+                endMeta=json.loads(highlight.endMeta), text=highlight.text,
+                annotationTag=highlight.annotationTag, notes=highlight.notes,
+                feedbackId=highlight.feedbackId
+            )
+            complete_highlight = {
+                'annotation': highlight_data,
+                'actionItems': json.loads(actionItems) if actionItems else []
+            }
+            feedback_entry['highlights'].append(complete_highlight)
+
+            temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
         if actionItems:
             complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
             feedbacks_dict[feedback.id]['highlights'].append(complete_highlight)
