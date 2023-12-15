@@ -122,9 +122,10 @@ def get_all_user_feedback_highlights(user, db: Session):
                 annotationTag=highlight.annotationTag, notes=highlight.notes,
                 feedbackId=highlight.feedbackId
             )
+            filtered_action_items = json.loads(actionItems)
             complete_highlight = {
                 'annotation': highlight_data,
-                'actionItems': json.loads(actionItems) if actionItems else []
+                'actionItems':  [value for value in filtered_action_items if value["action"] != None ]
             }
             feedback_entry['highlights'].append(complete_highlight)
     feedbacks_list = list(feedbacks_dict.values())
