@@ -33,7 +33,9 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
 def get_feedback_highlights_by_url(user, url, db: Session):
     print(f'url {url}')
 
-
+    cached_units_data = unit_temp.get_data()
+    if not cached_units_data:
+        cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -59,11 +61,22 @@ def get_feedback_highlights_by_url(user, url, db: Session):
         if actionItems:
             complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
         feedbackHighlights.append(complete_highlight)
+    unit_code = None
+    assessment_name = None
+    if cached_units_data:
+        for unit_data in cached_units_data:
+            assessments = unit_data.get('assessments')
+            if assessments:
+                for assessment in assessments:
+                    if assessment['id'] == feedback.assessmentId:
+                        unit_code = unit_data['unitCode'] +unit_data['year'] + unit_data['semester']
+                        assessment_name = assessment['assessmentName']
 
+                        break
 
 
     return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail,
-            "mark": feedback.mark,"highlights":feedbackHighlights}
+            "mark": feedback.mark,"highlights":feedbackHighlights, "unitCode":unit_code, "assessmentName":assessment_name}
 
 def get_all_user_feedback_highlights(user, db: Session):
     cached_units_data = unit_temp.get_data()
@@ -114,11 +127,5 @@ def get_all_user_feedback_highlights(user, db: Session):
                 'actionItems': json.loads(actionItems) if actionItems else []
             }
             feedback_entry['highlights'].append(complete_highlight)
-
-            temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
-        if actionItems:
-            complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
-            feedbacks_dict[feedback.id]['highlights'].append(complete_highlight)
-
     feedbacks_list = list(feedbacks_dict.values())
     return feedbacks_list
