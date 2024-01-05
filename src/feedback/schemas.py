@@ -20,3 +20,10 @@ class FeedbackWithHighlights(FeedbackBasePydantic):
     highlights: List[CompleteHighlight]
 
 
+class FeedbackRating(BaseModel):
+
+    clarity: int
+    personalise: int
+    evaluativeJudgement: int
+    usability: int
+    emotion: int

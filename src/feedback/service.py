@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from .models import Feedback
 from src.unit.service import get_all_units_with_assessments
-from .schemas import FeedbackBasePydantic, FeedbackWithHighlights
+from .schemas import FeedbackBasePydantic, FeedbackRating
 from src.highlight.models import Highlight
 from src.highlight.schemas import HighlightPydantic
 from src.action.models import AnnotationActionPoint
@@ -75,7 +75,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                         break
 
 
-    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail,
+    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
             "mark": feedback.mark,"highlights":feedbackHighlights, "unitCode":unit_code, "assessmentName":assessment_name}
 
 def get_all_user_feedback_highlights(user, db: Session):
@@ -130,3 +130,18 @@ def get_all_user_feedback_highlights(user, db: Session):
             feedback_entry['highlights'].append(complete_highlight)
     feedbacks_list = list(feedbacks_dict.values())
     return feedbacks_list
+
+def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
+
+        feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
+
+        if feedback and feedback.studentEmail == user.email:
+            feedback.clarity = rating.clarity
+            feedback.evaluativeJudgement = rating.evaluativeJudgement
+            feedback.personalise = rating.personalise
+            feedback.usability = rating.usability
+            feedback.emotion = rating.emotion
+            db.commit()
+            return True
+        else:
+            return False

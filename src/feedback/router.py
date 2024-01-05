@@ -3,8 +3,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.login.service import get_current_user
-from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights
-from .schemas import FeedbackBasePydantic, FeedbackWithHighlights
+from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights, rate_feedback
+from .schemas import FeedbackBasePydantic,FeedbackRating, FeedbackWithHighlights
 
 
 router = APIRouter()
@@ -18,7 +18,7 @@ def create_feedback_route(feedback:FeedbackBasePydantic, db: Session = Depends(g
 # def get_highlight_from_feedback_route(feedbackId: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
 #     return get_highlights_from_feedback(feedbackId, db)
 
-@router.get("/highlights")
+@router.get("/highlights" )
 def get_feedback_highlights_by_url_route( url, db: Session = Depends(get_db), user = Depends(get_current_user)):
     feedback = get_feedback_highlights_by_url(user, url, db)
     if not feedback:
@@ -31,3 +31,10 @@ def get_all_user_feedback_highlights_route(db: Session = Depends(get_db), user =
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback not found")
     return feedback
+
+@router.post("/rate/{feedbackId}")
+def rate_feedback_route(feedbackId:int, rating:FeedbackRating,db: Session = Depends(get_db), user = Depends(get_current_user)):
+
+    if not rate_feedback(feedbackId, rating, db, user):
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return True
