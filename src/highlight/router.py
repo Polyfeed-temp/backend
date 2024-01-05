@@ -28,3 +28,6 @@ def get_highlights(db: Session = Depends(get_db)):
 @router.get("/tags", response_model=List[str])
 def get_highlight_tags(db: Session = Depends(get_db)):
     return service.get_highlight_tags(db)
+@router.delete("/{highlight_id}", response_model=bool)
+def delete_highlight(highlight_id: str, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    return service.delete_highlight(db, highlight_id)

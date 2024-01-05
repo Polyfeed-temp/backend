@@ -12,9 +12,11 @@ from src.highlight import router as highlight_router
 from src.action import router as action_router
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.config import Config
+
 from src.dependencies import oauth2_scheme
 
 config = Config('.env')
+
 
 
 app = FastAPI()
@@ -22,7 +24,7 @@ app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cas
 
 app.add_middleware(CORSMiddleware,  allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS", "DELETE"],
     allow_headers=["Content-Type","Set-Cookie", "Authorization"])
 # app.include_router(annotation_router.router, prefix="/api/annotation", tags=["annotation"], dependencies=[Depends(oauth2_scheme)])
 app.include_router(user_router.router, prefix="/api/user", tags=["user"])
@@ -34,3 +36,4 @@ app.include_router(highlight_router.router, prefix="/api/highlight", tags=["high
 # app.include_router(action_router.router, prefix="/api/action", tags=["action"])
 app.include_router(login_router.router, prefix="/api/login", tags=["login"])
 app.include_router(openai_router.router, prefix="/api/openai", tags=["openai"])
+

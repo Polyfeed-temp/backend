@@ -44,6 +44,13 @@ def create_highlight(db: Session, highlight_data: CompleteHighlight):
     db.refresh(db_highlight)
 
 
+def delete_highlight(db: Session, highlight_id: str):
+    db_highlight = db.query(Highlight).filter(Highlight.id == highlight_id).first()
+    if db_highlight:
+        db.delete(db_highlight)
+        db.commit()
+        return True
+    return False
 
 def get_highlights(db: Session):
     return db.query(Highlight).all()
