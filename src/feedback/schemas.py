@@ -1,8 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional, List
+from pydantic import HttpUrl
+from src.highlight.schemas import CompleteHighlight
 
 
-class FeedbackPydantic(BaseModel):
+class FeedbackBasePydantic(BaseModel):
     id: Optional[int] = None
     mark: int
     clarity: Optional[int] = None
@@ -12,3 +14,16 @@ class FeedbackPydantic(BaseModel):
     markerEmail: Optional[str] = None
     studentEmail: str
     assessmentId: int
+    url: HttpUrl
+
+class FeedbackWithHighlights(FeedbackBasePydantic):
+    highlights: List[CompleteHighlight]
+
+
+class FeedbackRating(BaseModel):
+
+    clarity: int
+    personalise: int
+    evaluativeJudgement: int
+    usability: int
+    emotion: int

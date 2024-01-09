@@ -6,7 +6,7 @@ from .enums import Role, Faculty
 
 
 class UserPydantic(BaseModel):
-    monashId: str
+    monashId: Optional[str] =None
     monashObjectId: Optional[str] = None
     authcate: str
     email: str

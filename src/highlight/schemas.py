@@ -1,9 +1,11 @@
 from datetime import date
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, HttpUrl, UUID4
 
 from .enums import AnnotationTag
+
+from src.action.schemas import ActionPydantic
 
 
 class DomMeta(BaseModel):
@@ -17,7 +19,12 @@ class HighlightPydantic(BaseModel):
     startMeta: DomMeta
     endMeta: DomMeta
     text: str
-    url: HttpUrl
     annotationTag: AnnotationTag
     notes: Optional[str] = None
     feedbackId: int
+    gptResponse: Optional[str] = None
+
+class CompleteHighlight(BaseModel):
+    annotation:HighlightPydantic
+    actionItems: Optional[List[ActionPydantic]] = None
+

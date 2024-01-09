@@ -40,7 +40,7 @@ def signup_user(db: Session, userData: UserPydantic):
         userData.password = get_password_hash(userData.password)
         userData.role = userData.role.value
         userData.faculty = userData.faculty.value
-
+        userData.monashObjectId = None
         return create_user(db, userData)
 
 
