@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from .models import Feedback
 from src.unit.service import get_all_units_with_assessments
 from .schemas import FeedbackBasePydantic, FeedbackRating
@@ -59,7 +60,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
 
         temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
         if actionItems:
-            complete_highlight= {'annotation' : temp, 'actionItems':json.loads(actionItems)}
+            complete_highlight= {'annotation' : temp, 'actionItems':    [value for value in json.loads(actionItems) if value["action"] != None ]}
         feedbackHighlights.append(complete_highlight)
     unit_code = None
     assessment_name = None
@@ -145,3 +146,29 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
             return True
         else:
             return False
+
+def delete_feedback(feedbackId, db: Session, user):
+    feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
+    if feedback and feedback.studentEmail == user.email:
+        db.delete(feedback)
+        db.commit()
+        return True
+    else:
+        return False
+
+def delete_all_highlights(feedbackId, db: Session, user):
+    try:
+        feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
+        if feedback and feedback.studentEmail == user.email:
+            highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId).all()
+            for highlight in highlights:
+                db.delete(highlight)
+
+                db.commit()
+            return True
+        else:
+            return False
+    except SQLAlchemyError as e:
+        db.rollback()  # Rollback in case of any error
+        print(f"An error occurred: {e}")
+        return False

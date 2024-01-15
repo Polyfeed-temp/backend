@@ -43,6 +43,15 @@ def create_highlight(db: Session, highlight_data: CompleteHighlight):
     db.commit()
     db.refresh(db_highlight)
 
+def update_highlight_notes(db: Session, id: str, notes: str):
+    db_highlight = db.query(Highlight).filter(Highlight.id == id).first()
+    if db_highlight:
+        db_highlight.notes = notes
+        db.commit()
+        db.refresh(db_highlight)
+        return db_highlight
+    return None
+
 
 def delete_highlight(db: Session, highlight_id: str):
     db_highlight = db.query(Highlight).filter(Highlight.id == highlight_id).first()

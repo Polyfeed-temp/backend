@@ -33,7 +33,7 @@ app.include_router(unit_router.router, prefix="/api/unit", tags=["unit"])
 # app.include_router(enrollment_router.router, prefix="/api/enrollment", tags=["enrollment"])
 app.include_router(feedback_router.router, prefix="/api/feedback", tags=["feedback"])
 app.include_router(highlight_router.router, prefix="/api/highlight", tags=["highlight"])
-# app.include_router(action_router.router, prefix="/api/action", tags=["action"])
+app.include_router(action_router.router, prefix="/api/action", tags=["action"])
 app.include_router(login_router.router, prefix="/api/login", tags=["login"])
 app.include_router(openai_router.router, prefix="/api/openai", tags=["openai"])
 
