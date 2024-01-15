@@ -24,8 +24,9 @@ app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cas
 
 app.add_middleware(CORSMiddleware,  allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS", "DELETE"],
+    allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PATCH"],
     allow_headers=["Content-Type","Set-Cookie", "Authorization"])
+
 # app.include_router(annotation_router.router, prefix="/api/annotation", tags=["annotation"], dependencies=[Depends(oauth2_scheme)])
 app.include_router(user_router.router, prefix="/api/user", tags=["user"])
 app.include_router(unit_router.router, prefix="/api/unit", tags=["unit"])
