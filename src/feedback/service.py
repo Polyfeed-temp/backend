@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from .models import Feedback
 from src.unit.service import get_all_units_with_assessments
@@ -171,4 +171,13 @@ def delete_all_highlights(feedbackId, db: Session, user):
     except SQLAlchemyError as e:
         db.rollback()  # Rollback in case of any error
         print(f"An error occurred: {e}")
+        return False
+
+def patch_assessment_feedback(feedback_id, assessment_id, db: Session, user):
+    feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+    if feedback and feedback.studentEmail == user.email:
+        feedback.assessmentId = assessment_id
+        db.commit()
+        return True
+    else:
         return False
