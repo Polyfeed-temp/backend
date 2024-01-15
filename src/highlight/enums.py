@@ -7,3 +7,4 @@ class AnnotationTag(Enum):
     ActionItem = 'Action Item'
     Confused = 'Confused'
     Other = 'Other'
+    ChatGPT = 'ChatGPT'
