@@ -4,7 +4,7 @@ from pydantic import UUID4
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.login.service import get_current_user
-from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights, rate_feedback, delete_feedback, delete_all_highlights,patch_assessment_feedback
+from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights, rate_feedback, delete_feedback, delete_all_highlights,patch_assessment_feedback, rate_gpt_response
 from .schemas import FeedbackBasePydantic,FeedbackRating, FeedbackWithHighlights
 
 
@@ -53,5 +53,11 @@ def delete_all_highlights_route(feedbackId, db: Session = Depends(get_db), user 
 @router.patch("/assessment/{feedback_id}/{assessment_id}")
 def patch_assessment_feedback_route(feedback_id, assessment_id, db: Session = Depends(get_db), user = Depends(get_current_user)):
     if not patch_assessment_feedback(feedback_id, assessment_id, db, user):
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return True
+
+@router.post("/rate/gpt/{feedbackId}")
+def rate_gpt_response_route(feedbackId, rating:int,db: Session = Depends(get_db), user = Depends(get_current_user)):
+    if not rate_gpt_response(feedbackId, rating, db, user):
         raise HTTPException(status_code=404, detail="Feedback not found")
     return True

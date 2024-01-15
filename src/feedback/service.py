@@ -146,6 +146,16 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
             return True
         else:
             return False
+def rate_gpt_response(feedbackId:int, rating:int,db: Session, user):
+
+        feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
+
+        if feedback and feedback.studentEmail == user.email:
+            feedback.gptResponseRating = rating
+            db.commit()
+            return True
+        else:
+            return False
 
 def delete_feedback(feedbackId, db: Session, user):
     feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
