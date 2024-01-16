@@ -10,4 +10,4 @@ class ActionPydantic(BaseModel):
     action: str
     category: ActionPointCategory
     deadline: date
-    highlightId: Optional[UUID4] = None
+    completed: Optional[bool] = False
