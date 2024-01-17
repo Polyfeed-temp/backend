@@ -10,4 +10,4 @@ class ActionPydantic(BaseModel):
     action: str
     category: ActionPointCategory
     deadline: date
-    completed: Optional[bool] = False
+    status: Optional[bool] = False

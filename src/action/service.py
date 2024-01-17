@@ -25,10 +25,25 @@ def update_action_points(highlight_id, action_points: List[ActionPydantic], db: 
             category=action_point.category.value,
             deadline=action_point.deadline,
             highlightId=str(highlight_id),
-            status=action_point.completed or False
+            status=action_point.status or False
         )
         db.add(db_action)
 
     # Commit the transaction
+    db.commit()
+    return True
+def update_action_status(action_id, status, db):
+    db_action = db.query(AnnotationActionPoint).filter(AnnotationActionPoint.id == action_id).first()
+    if not db_action:
+        return False
+    db_action.status = int(status)
+    db.commit()
+    return True
+
+def delete_action_point(action_id, db):
+    db_action = db.query(AnnotationActionPoint).filter(AnnotationActionPoint.id == action_id).first()
+    if not db_action:
+        return False
+    db.delete(db_action)
     db.commit()
     return True
