@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pydantic import BaseModel, HttpUrl, UUID4
 
@@ -15,7 +15,7 @@ class DomMeta(BaseModel):
 
 
 class HighlightPydantic(BaseModel):
-    id: UUID4
+    id: Union[UUID4, str]
     startMeta: DomMeta
     endMeta: DomMeta
     text: str
@@ -23,6 +23,7 @@ class HighlightPydantic(BaseModel):
     notes: Optional[str] = None
     feedbackId: int
     gptResponse: Optional[str] = None
+    commonTheme: Optional[str] = None
 
 class CompleteHighlight(BaseModel):
     annotation:HighlightPydantic

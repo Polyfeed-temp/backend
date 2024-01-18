@@ -7,6 +7,7 @@ from .schemas import FeedbackBasePydantic, FeedbackRating
 from src.highlight.models import Highlight
 from src.highlight.schemas import HighlightPydantic
 from src.action.models import AnnotationActionPoint
+from src.highlight.schemas import DomMeta
 import json
 from src.database import unit as unit_temp
 
@@ -19,12 +20,15 @@ def get_feedback_summumary_by_assessment_id(assessment_id: int, db: Session):
 
 def create_feedback(feedback:FeedbackBasePydantic, db: Session):
     feedback.url = str(feedback.url)
-    feedback = Feedback(**feedback.model_dump())
-    db.add(feedback)
+    feedback_model = Feedback(**feedback.model_dump())
+    db.add(feedback_model)
     db.commit()
-    db.refresh(feedback)
-
-    return feedback
+    try:
+        db.refresh(feedback_model)
+        return feedback_model
+    except SQLAlchemyError as e:
+        update_feedback = db.query(Feedback).filter(Feedback.url == feedback.url, Feedback.studentEmail == feedback.studentEmail).first()
+        return update_feedback
 
 def get_highlights_from_feedback(feedback_id: int, db: Session):
     highlights = db.query(Highlight).filter(Highlight.feedbackId == feedback_id).all()
@@ -33,7 +37,7 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
 
 def get_feedback_highlights_by_url(user, url, db: Session):
     print(f'url {url}')
-
+    main_url = url.split('#')[0]
     cached_units_data = unit_temp.get_data()
     if not cached_units_data:
         cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
@@ -43,9 +47,10 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                 'id', AnnotationActionPoint.id,
                 'action', AnnotationActionPoint.action,
                 'category', AnnotationActionPoint.category,
-                'deadline', AnnotationActionPoint.deadline
+                'deadline', AnnotationActionPoint.deadline,
+                'status', AnnotationActionPoint.status
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.url == url).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
 
     result = query.all()
     feedbackHighlights =[]
@@ -54,11 +59,15 @@ def get_feedback_highlights_by_url(user, url, db: Session):
         return None
     for row in result:
         feedback, highlight, actionItems = row
-        print(feedback)
+
         if not highlight:
             break
+        start_meta = highlight.startMeta
+        end_meta = highlight.endMeta
 
-        temp = HighlightPydantic(id=highlight.id, startMeta=json.loads(highlight.startMeta), endMeta=json.loads(highlight.endMeta), text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
+        parsed_start_meta = json.loads(start_meta) if start_meta is not None else DomMeta(parentTagName="div", parentIndex=0, textOffset=0)
+        parsed_end_meta = json.loads(end_meta) if end_meta is not None else DomMeta(parentTagName="div", parentIndex=0, textOffset=0)
+        temp = HighlightPydantic(id=highlight.id, startMeta=parsed_start_meta, endMeta=parsed_end_meta, text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes, feedbackId=highlight.feedbackId)
         if actionItems:
             complete_highlight= {'annotation' : temp, 'actionItems':    [value for value in json.loads(actionItems) if value["action"] != None ]}
         feedbackHighlights.append(complete_highlight)
@@ -77,7 +86,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
 
 
     return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
-            "mark": feedback.mark,"highlights":feedbackHighlights, "unitCode":unit_code, "assessmentName":assessment_name}
+            "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, "highlights":feedbackHighlights, }
 
 def get_all_user_feedback_highlights(user, db: Session):
     cached_units_data = unit_temp.get_data()
@@ -89,7 +98,8 @@ def get_all_user_feedback_highlights(user, db: Session):
                 'id', AnnotationActionPoint.id,
                 'action', AnnotationActionPoint.action,
                 'category', AnnotationActionPoint.category,
-                'deadline', AnnotationActionPoint.deadline
+                'deadline', AnnotationActionPoint.deadline,
+                'status', AnnotationActionPoint.status
             )
         ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
 
@@ -117,11 +127,20 @@ def get_all_user_feedback_highlights(user, db: Session):
                             break
 
         if highlight:
+            start_meta = highlight.startMeta
+            end_meta = highlight.endMeta
+
+            parsed_start_meta = json.loads(start_meta) if start_meta is not None else DomMeta(parentTagName="div",
+                                                                                              parentIndex=0,
+                                                                                              textOffset=0)
+            parsed_end_meta = json.loads(end_meta) if end_meta is not None else DomMeta(parentTagName="div",
+                                                                                        parentIndex=0, textOffset=0)
             highlight_data = HighlightPydantic(
-                id=highlight.id, startMeta=json.loads(highlight.startMeta),
-                endMeta=json.loads(highlight.endMeta), text=highlight.text,
+                id=highlight.id, startMeta=parsed_start_meta,
+                endMeta=parsed_end_meta, text=highlight.text,
                 annotationTag=highlight.annotationTag, notes=highlight.notes,
-                feedbackId=highlight.feedbackId
+                feedbackId=highlight.feedbackId,
+                commonTheme=highlight.commonTheme
             )
             filtered_action_items = json.loads(actionItems)
             complete_highlight = {
