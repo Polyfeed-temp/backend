@@ -34,7 +34,7 @@ def create_user(db: Session, userData: UserPydantic):
 def signup_user(db: Session, userData: UserPydantic):
     db_user = db.query(User).filter(User.email == userData.email).all()
     if len(db_user) == 1:
-        return "Error: User already exists."
+        return False
     else:
         # hash the password
         userData.password = get_password_hash(userData.password)

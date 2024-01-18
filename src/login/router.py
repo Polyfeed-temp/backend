@@ -5,11 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from fastapi import APIRouter, Request
 from typing_extensions import Annotated
-from .service import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, UserResponse
+from .service import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, UserResponse, refresh_token
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.user.schemas import UserPydantic
-
 
 router = APIRouter()
 
@@ -38,3 +37,6 @@ async def verify_token(request: Request, current_user: UserPydantic = Depends(ge
     for key, value in headers.items():
         print(f"{key}: {value}")
     return current_user
+@router.post("/refreshToken")
+def refresh_token_route(token):
+    return refresh_token(token)

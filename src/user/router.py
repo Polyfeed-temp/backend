@@ -1,6 +1,6 @@
 from typing import List
 from .schemas import UserPydantic, EnrolledUnitPydantic
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.user import service
@@ -17,7 +17,13 @@ def get_users(db: Session = Depends(get_db)):
 
 @router.post("/signup", response_model=UserPydantic)
 def signup(user: UserPydantic, db: Session = Depends(get_db)):
-    return service.signup_user(db, user)
+
+    user =service.signup_user(db, user)
+    if(user):
+        return user
+    else:
+        raise HTTPException(status_code=409, detail="User already exists")
+
 
 #
 # @router.get("/{email}", response_model=UserPydantic)
