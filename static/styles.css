@@ -120,21 +120,9 @@ header nav ul li a {
 }
 
 main {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-top: 70px; /* Adjust this to account for your fixed header */
-    padding-bottom: 60px; /* Adjust if you have a footer */
-    height: calc(100vh - 130px); /* Adjust this based on header and footer heights */
-    margin: 0;
-    overflow: hidden;
+    padding: 20px;
+    text-align: center;
 }
-
-main embed {
-    width: 100%;
-    height: 100%;
-}
-
 
 footer {
     background-color: #333;
