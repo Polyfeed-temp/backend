@@ -121,7 +121,9 @@ def get_all_user_feedback_highlights(user, db: Session):
                 if assessments:
                     for assessment in assessments:
                         if assessment['id'] == feedback.assessmentId:
-                            feedbacks_dict[feedback.id]['unitCode'] = unit_data['unitCode'] +unit_data['year'] + unit_data['semester']
+                            feedbacks_dict[feedback.id]['unitCode'] = unit_data['id']
+                            feedbacks_dict[feedback.id]['year'] = unit_data['year']
+                            feedbacks_dict[feedback.id]['semester'] = unit_data['semester']
                             feedbacks_dict[feedback.id]['assessmentName'] = assessment['assessmentName']
 
                             break
@@ -210,3 +212,64 @@ def patch_assessment_feedback(feedback_id, assessment_id, db: Session, user):
         return True
     else:
         return False
+
+def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
+    cached_units_data = unit_temp.get_data()
+    if not cached_units_data:
+        cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
+    query = (
+        db.query(Feedback, Highlight, func.concat('[', func.group_concat(
+            func.json_object(
+                'id', AnnotationActionPoint.id,
+                'action', AnnotationActionPoint.action,
+                'category', AnnotationActionPoint.category,
+                'deadline', AnnotationActionPoint.deadline,
+                'status', AnnotationActionPoint.status
+            )
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(
+            AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id).group_by(Feedback.id, Highlight.id))
+
+    result = query.all()
+    feedbackHighlights = []
+    feedback = None
+    if len(result) == 0:
+        return None
+    for row in result:
+        feedback, highlight, actionItems = row
+
+        if not highlight:
+            break
+        start_meta = highlight.startMeta
+        end_meta = highlight.endMeta
+
+        parsed_start_meta = json.loads(start_meta) if start_meta is not None else DomMeta(parentTagName="div",
+                                                                                          parentIndex=0, textOffset=0)
+        parsed_end_meta = json.loads(end_meta) if end_meta is not None else DomMeta(parentTagName="div", parentIndex=0,
+                                                                                    textOffset=0)
+        temp = HighlightPydantic(id=highlight.id, startMeta=parsed_start_meta, endMeta=parsed_end_meta,
+                                 text=highlight.text, annotationTag=highlight.annotationTag, notes=highlight.notes,
+                                 feedbackId=highlight.feedbackId)
+        if actionItems:
+            complete_highlight = {'annotation': temp, 'actionItems': [value for value in json.loads(actionItems) if
+                                                                      value["action"] != None]}
+        feedbackHighlights.append(complete_highlight)
+    unit_code = None
+    assessment_name = None
+    if cached_units_data:
+        for unit_data in cached_units_data:
+            assessments = unit_data.get('assessments')
+            if assessments:
+                for assessment in assessments:
+                    if assessment['id'] == feedback.assessmentId:
+                        unit_code = unit_data['unitCode'] + unit_data['year'] + unit_data['semester']
+                        assessment_name = assessment['assessmentName']
+
+                        break
+
+    return {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
+            "studentEmail": feedback.studentEmail, "clarity": feedback.clarity,
+            "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise,
+            "usability": feedback.usability, "emotion": feedback.emotion,
+            "mark": feedback.mark, "unitCode": unit_code, "assess mentName": assessment_name,
+            "gptResponseRating": feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,
+            "gptResponse": feedback.gptResponse, "highlights": feedbackHighlights, }
