@@ -89,9 +89,11 @@ def get_feedback_highlights_by_url(user, url, db: Session):
             "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, "highlights":feedbackHighlights, }
 
 def get_all_user_feedback_highlights(user, db: Session):
-    cached_units_data = unit_temp.get_data()
-    if not cached_units_data:
-        cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
+    # cached_units_data = unit_temp.get_data()
+    # if not cached_units_data:
+    #     cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
+    cached_units_data = get_all_units_with_assessments(db)
+    print("Monster", cached_units_data)
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
