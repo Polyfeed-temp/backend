@@ -77,18 +77,18 @@ async def get_current_user(req: Request, db: Session = Depends(get_db)):
 
     token = req.headers.get("Authorization")
 
-    # try:
-    #     print("This is token", token)
-    #     decoded_token = auth.verify_id_token(token)
-    #     print(decoded_token)
-    #     email = decoded_token.get('email')
-    #
-    #     if email is None:
-    #         raise credentials_exception
-    # except JWTError:
-    #     raise credentials_exception
+    try:
+        print("This is token", token)
+        decoded_token = auth.verify_id_token(token)
+        print(decoded_token)
+        email = decoded_token.get('email')
 
-    user = get_user_by_email(db, email="minhua.zhou@monash.edu")
+        if email is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = get_user_by_email(db, email=email)
     if user is None:
         raise credentials_exception
     return user
