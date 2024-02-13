@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Union
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header, Request
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -8,9 +8,18 @@ from src.user.service import get_user_by_email
 from src.dependencies import verify_password, oauth2_scheme
 from src.user.schemas import UserPydantic
 from src.database import get_db
+
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import auth
+
+cred = credentials.Certificate(
+    "src/northern-audio-405809-firebase-adminsdk-myq2f-41e88bfe44.json")
+app = firebase_admin.initialize_app(cred)
 
 
 class UserResponse(BaseModel):
@@ -18,8 +27,7 @@ class UserResponse(BaseModel):
     access_token: str
 
 
-
-def authenticate_user(db:Session, email: str, password: str):
+def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email, no_password=False)
     print(user)
     if not user:
@@ -28,6 +36,8 @@ def authenticate_user(db:Session, email: str, password: str):
         return False
     del user.password
     return user
+
+
 def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
     to_encode = data.copy()
     if expires_delta:
@@ -38,24 +48,51 @@ def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-async def get_current_user(db:Session= Depends(get_db), token = Depends(oauth2_scheme)):
+
+# async def get_current_user(db:Session= Depends(get_db), token = Depends(oauth2_scheme)):
+#     credentials_exception = HTTPException(
+#         status_code=status.HTTP_401_UNAUTHORIZED,
+#         detail="Could not validate credentials",
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+#     print(token)
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         email: str = payload.get("sub")
+#         if email is None:
+#             raise credentials_exception
+#     except JWTError:
+#         raise credentials_exception
+#     user = get_user_by_email(db, email=email)
+#     if user is None:
+#         raise credentials_exception
+#     return user
+
+async def get_current_user(req: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    print(token)
+
+    token = req.headers.get("Authorization")
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
+        print("This is token", token)
+        decoded_token = auth.verify_id_token(token)
+        print(decoded_token)
+        email = decoded_token.get('email')
+
         if email is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
+
     user = get_user_by_email(db, email=email)
     if user is None:
         raise credentials_exception
     return user
+
 
 def refresh_token(token):
     print(token)

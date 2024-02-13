@@ -48,8 +48,8 @@ def delete_unit(db: Session, unitCode: str):
         return True
     else:
         return False
-def get_all_units_with_assessments(db):
-    global cached_units_data
+def get_all_units_with_assessments(db: Session):
+    # global cached_units_data
     if cached_units_data.get_data():
         return cached_units_data.get_data()
     subquery = (

@@ -20,10 +20,14 @@ def get_user_by_email(db: Session, email: str, no_password: bool = True):
     if len(db_user) == 1:
         return db_user[0]
     else:
+        print("Here's the user", db_user)
         return None
 
 
 def create_user(db: Session, userData: UserPydantic):
+    userData.role = userData.role.value
+    userData.faculty = userData.faculty.value
+    userData.monashObjectId = None
     db_user = User(**userData.model_dump())
     db.add(db_user)
     db.commit()
