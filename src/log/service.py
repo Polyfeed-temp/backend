@@ -15,8 +15,8 @@ def get_all_logs(db: Session):
 
 def create_log(db: Session, body:Item):
 
-    new_log = Log(id=uuid4().hex, userEmail=body.userEmail, eventType=body.eventType, tagName=body.tagName, content=body.content,
-                  baseUrl=body.baseUrl, ipAddress=body.ipAddress, rowStatus="ACTIVE" )
+    new_log = Log(id=uuid4().hex, userEmail=body.userEmail, eventType=body.eventType, content=body.content,
+                  baseUrl=body.baseUrl, eventSource=body.eventSource )
 
     db.add(new_log)
 

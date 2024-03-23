@@ -9,13 +9,9 @@ from src.log.service import create_log, get_all_logs
 from src.log.schemas import Item
 router = APIRouter()
 
-
-
 @router.post("/")
-def create_logs(request: Request,item:Item, db: Session = Depends(get_db), user=Depends(get_current_user)): 
-    client_host = request.client.host
+def create_logs(item:Item, db: Session = Depends(get_db), user=Depends(get_current_user)): 
     item.userEmail = user.email
-    item.ipAddress = client_host
     return create_log(db, item)
 
 @router.get("/")
