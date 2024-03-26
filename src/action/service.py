@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from src.action.models import AnnotationActionPoint
 from src.action.schemas import ActionPydantic
 from typing import List
-import json
 def add_action_point_to_highlight(highlight_id, action_point, db: Session):
     db_action = AnnotationActionPoint(action=action_point.action, category=action_point.category.value, deadline=action_point.deadline, highlightId=str(highlight_id) )
     db.add(db_action)
@@ -44,6 +43,8 @@ def delete_action_point(action_id, db):
     db_action = db.query(AnnotationActionPoint).filter(AnnotationActionPoint.id == action_id).first()
     if not db_action:
         return False
-    db.delete(db_action)
+    # db.delete(db_action)
+
+    db_action.rowStatus = "INACTIVE"
     db.commit()
     return True

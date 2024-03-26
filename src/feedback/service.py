@@ -50,7 +50,12 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                 'deadline', AnnotationActionPoint.deadline,
                 'status', AnnotationActionPoint.status
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+        .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
+                   AnnotationActionPoint.rowStatus == "ACTIVE")
+        .filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email, 
+                                                 Feedback.rowStatus == "ACTIVE")
+        .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
     feedbackHighlights =[]
@@ -93,7 +98,6 @@ def get_all_user_feedback_highlights(user, db: Session):
     # if not cached_units_data:
     #     cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
     cached_units_data = get_all_units_with_assessments(db)
-    print("Monster", cached_units_data)
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -103,13 +107,17 @@ def get_all_user_feedback_highlights(user, db: Session):
                 'deadline', AnnotationActionPoint.deadline,
                 'status', AnnotationActionPoint.status
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.studentEmail == user.email).group_by(Feedback.id, Highlight.id))
+        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+            .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
+                       AnnotationActionPoint.rowStatus == "ACTIVE")
+            .filter(Feedback.studentEmail == user.email, Feedback.rowStatus == "ACTIVE")
+            .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
-    feedbackHighlights =[]
     feedbacks_dict={}
     if len(result) == 0:
         return None
+    
     for row in result:
         feedback, highlight, actionItems = row
         feedback_entry = feedbacks_dict.setdefault(feedback.id, {
@@ -183,7 +191,9 @@ def rate_gpt_response(feedbackId:int, rating:int,db: Session, user):
 def delete_feedback(feedbackId, db: Session, user):
     feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
     if feedback and feedback.studentEmail == user.email:
-        db.delete(feedback)
+
+        feedback.rowStatus = "INACTIVE"
+        # db.delete(feedback)
         db.commit()
         return True
     else:
@@ -195,8 +205,8 @@ def delete_all_highlights(feedbackId, db: Session, user):
         if feedback and feedback.studentEmail == user.email:
             highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId).all()
             for highlight in highlights:
-                db.delete(highlight)
-
+                # db.delete(highlight)
+                highlight.rowStatus = "INACTIVE"
                 db.commit()
             return True
         else:
@@ -228,8 +238,13 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
                 'deadline', AnnotationActionPoint.deadline,
                 'status', AnnotationActionPoint.status
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId).outerjoin(
-            AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId).filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id).group_by(Feedback.id, Highlight.id))
+        ), ']').label('actionItems'))
+            .outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+            .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
+                       AnnotationActionPoint.rowStatus == "ACTIVE")
+            .filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id, 
+                    Feedback.rowStatus == "ACTIVE")
+            .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
     feedbackHighlights = []
@@ -255,6 +270,7 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
             complete_highlight = {'annotation': temp, 'actionItems': [value for value in json.loads(actionItems) if
                                                                       value["action"] != None]}
         feedbackHighlights.append(complete_highlight)
+   
     unit_code = None
     assessment_name = None
     if cached_units_data:
@@ -265,7 +281,6 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
                     if assessment['id'] == feedback.assessmentId:
                         unit_code = unit_data['unitCode'] + unit_data['year'] + unit_data['semester']
                         assessment_name = assessment['assessmentName']
-
                         break
 
     return {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,

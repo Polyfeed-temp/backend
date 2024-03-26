@@ -3,7 +3,7 @@ import json
 from sqlalchemy.orm import Session
 
 from .models import Highlight
-from .schemas import DomMeta, HighlightPydantic, CompleteHighlight
+from .schemas import DomMeta, CompleteHighlight
 from src.action.models import AnnotationActionPoint
 
 
@@ -11,7 +11,7 @@ localDatabase = []
 
 
 def get_highlights_by_url(db: Session, url: str):
-    db_highlights = db.query(Highlight).filter(Highlight.url == url).all()
+    db_highlights = db.query(Highlight).filter(Highlight.url == url, Highlight.rowStatus == "ACTIVE").all()
     if db_highlights:
         for db_highlight in db_highlights:
             db_highlight.start_meta = DomMeta(**json.loads(db_highlight.start_meta))
@@ -56,7 +56,8 @@ def update_highlight_notes(db: Session, id: str, notes: str):
 def delete_highlight(db: Session, highlight_id: str):
     db_highlight = db.query(Highlight).filter(Highlight.id == highlight_id).first()
     if db_highlight:
-        db.delete(db_highlight)
+        db_highlight.rowStatus = "INACTIVE"
+        # db.delete(db_highlight)
         db.commit()
         return True
     return False

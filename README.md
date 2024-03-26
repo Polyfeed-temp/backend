@@ -5,7 +5,7 @@
 1. Install python3.8
 2. if not installed using pyenv
 3. Install pip
-4.
+4. pip install requirements.txt
 
 newgrp docker
 
@@ -20,7 +20,7 @@ docker image build --tag polyfeed-backend .
 ### run container
 
 ```
-docker run -v ~/polyfeed_backend:/app -p 8000:8000 polyfeed-backend
+docker run -d -p 8000:8000 polyfeed-backend
 ```
 
 ### Apache Http server config
