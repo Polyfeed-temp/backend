@@ -1,9 +1,7 @@
-
+import os
 from openai import OpenAI
 
-apikey =  "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"
-
-
+apikey =  os.environ.get("OPENAI_API_KEY")
 def question(role, content):
     client = OpenAI(api_key=apikey)
 
