@@ -16,7 +16,7 @@ def get_feedback_by_assessment_id(assessment_id: int, db: Session):
     return db.query(Feedback).filter(Feedback.assessment_id == assessment_id).all()
 
 def get_feedback_summumary_by_assessment_id(assessment_id: int, db: Session):
-    return db.query(Feedback).join(Highlight, Feedback.highlight_id == Highlight.id).filter(Feedback.assessment_id == assessment_id).all()
+    return db.query(Feedback).join(Highlight, (Feedback.highlight_id == Highlight.id) & (Highlight.rowStatus == "ACTIVE")).filter(Feedback.assessment_id == assessment_id).all()
 
 def create_feedback(feedback:FeedbackBasePydantic, db: Session):
     feedback.url = str(feedback.url)
@@ -31,7 +31,7 @@ def create_feedback(feedback:FeedbackBasePydantic, db: Session):
         return update_feedback
 
 def get_highlights_from_feedback(feedback_id: int, db: Session):
-    highlights = db.query(Highlight).filter(Highlight.feedbackId == feedback_id).all()
+    highlights = db.query(Highlight).filter(Highlight.feedbackId == feedback_id, Highlight.rowStatus == "ACTIVE").all()
     return highlights
 
 
@@ -49,7 +49,8 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                 'deadline', AnnotationActionPoint.deadline,
                 'status', AnnotationActionPoint.status,
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+        ), ']').label('actionItems')).outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & 
+                                                (Highlight.rowStatus == "ACTIVE"))
         .outerjoin(AnnotationActionPoint,( Highlight.id == AnnotationActionPoint.highlightId) 
                    & (AnnotationActionPoint.rowStatus == "ACTIVE"))
         .filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email, 
@@ -106,7 +107,7 @@ def get_all_user_feedback_highlights(user, db: Session):
                 'deadline', AnnotationActionPoint.deadline,
                 'status', AnnotationActionPoint.status
             )
-        ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+        ), ']').label('actionItems')).outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
             .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) &
                        ((AnnotationActionPoint.rowStatus == "ACTIVE")))
             .filter(Feedback.studentEmail == user.email, Feedback.rowStatus == "ACTIVE")
@@ -202,7 +203,7 @@ def delete_all_highlights(feedbackId, db: Session, user):
     try:
         feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
         if feedback and feedback.studentEmail == user.email:
-            highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId).all()
+            highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId, Highlight.rowStatus == "ACTIVE").all()
             for highlight in highlights:
                 # db.delete(highlight)
                 highlight.rowStatus = "INACTIVE"
@@ -238,7 +239,7 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
                 'status', AnnotationActionPoint.status
             )
         ), ']').label('actionItems'))
-            .outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
+            .outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
             .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
                        (AnnotationActionPoint.rowStatus == "ACTIVE"))
             .filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id, 
