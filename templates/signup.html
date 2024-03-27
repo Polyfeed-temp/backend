@@ -1,124 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-<title>Sign Up Form</title>
-<link rel="stylesheet" href="/static/styles.css">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sign Up Form</title>
+    <link rel="stylesheet" href="/static/styles.css" />
     <script>
-        document.addEventListener('DOMContentLoaded', (event)=>{
-            document.getElementById("signup-form").addEventListener("submit", async function(event) {
-    event.preventDefault();
+      document.addEventListener("DOMContentLoaded", (event) => {
+        document
+          .getElementById("signup-form")
+          .addEventListener("submit", async function (event) {
+            event.preventDefault();
 
-    const formData = new FormData(event.target);
-    const formProps = Object.fromEntries(formData);
-    formProps.role = formData.get('role');
-    formProps.faculty = formData.get('faculty');
-    formProps.authcate = formData.get('email').split('@')[0]
-    console.log(formProps)
-                  const messageElem =document.getElementById('success-message')
-                      messageElem.style.display = 'block';
-    try {
-        const response = await fetch('/api/user/signup', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formProps),
-        }).then((response) => {
-            console.log(response)
-            if (response.status==200){
-                   messageElem.innerText = 'Signup successful!';
+            const formData = new FormData(event.target);
+            const formProps = Object.fromEntries(formData);
+            formProps.role = formData.get("role");
+            formProps.faculty = formData.get("faculty");
+            formProps.authcate = formData.get("email").split("@")[0];
+            console.log(formProps);
+            const messageElem = document.getElementById("success-message");
+            messageElem.style.display = "block";
+            try {
+              const response = await fetch("/api/user/signup", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formProps),
+              })
+                .then((response) => {
+                  console.log(response);
+                  if (response.status == 200) {
+                    messageElem.innerText = "Signup successful!";
+                  } else if (response.status == 409) {
+                    console.log(response.body);
+                    messageElem.innerText = "user already exists";
+                  } else {
+                    messageElem.innerText =
+                      "Something went wrong please try again";
+                  }
+                })
+                .catch((error) => {
+                  messageElem.innerText = error;
+                });
+            } catch (error) {
+              console.error("Error:", error);
+              messageElem.innerText = error;
             }
-            else if (response.status == 409) {
-                console.log(response.body)
-                messageElem.innerText= "user already exists"
-            }else{
-                messageElem.innerText = "Something went wrong please try again"
-            }
-
-        }).catch((error) => {
-            messageElem.innerText = error
-        });
-
-    } catch (error) {
-        console.error('Error:', error);
-        messageElem.innerText = error
-
-    }
-});
-        })
-
-</script>
-
-</head>
-<body>
-<header>
-        <nav>
-            <a href="/">
-           <img src="/static/logo.jpg" alt="Company Logo" id="navbar-logo">
+          });
+      });
+    </script>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/">
+          <img src="/static/logo.jpg" alt="Company Logo" id="navbar-logo" />
         </a>
 
-            <ul>
-
-                <li><a href="/signup">SignUp</a></li>
-                <li><a href="/guide">Installation Guide</a></li>
-
-            </ul>
-        </nav>
+        <ul>
+          <li><a href="/signup">SignUp</a></li>
+          <li><a href="/guide">Installation Guide</a></li>
+        </ul>
+      </nav>
     </header>
-<main>
-
-
-<div class="form-container">
+    <main>
+      <div class="form-container">
         <form id="signup-form">
-            <h2>Sign Up</h2>
-            <div class="form-group">
-                <label for="firstName">First Name</label>
-                <input type="text" id="firstName" name="firstName" required>
-            </div>
-            <div class="form-group">
-                <label for="last-name">Last Name</label>
-                <input type="text" id="last-name" name="lastName" required>
-            </div>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="form-group">
-                <label for="role">Role</label>
-                <select id="role" name="role" required>
-                    <option value="" disabled selected>Select a role</option>
-                    <option value="Student">Student</option>
-                    <option value="Tutor">Tutor</option>
-                    <option value="Chief Examiner">CE</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="faculty">Faculty</label>
-                <select id="faculty" name="faculty" required>
-                     <option value="" disabled selected>
-                  Select your faculty
-                </option>
-                      <option value="Arts">Arts</option>
-    <option value="Art, Design and Architecture">Art, Design and Architecture</option>
-    <option value="Business and Economics">Business and Economics</option>
-    <option value="Education">Education</option>
-    <option value="Engineering">Engineering</option>
-    <option value="Information Technology">Information Technology</option>
-    <option value="Law">Law</option>
-    <option value="Medicine, Nursing and Health Sciences">Medicine, Nursing and Health Sciences</option>
-    <option value="Pharmacy and Pharmaceutical Sciences">Pharmacy and Pharmaceutical Sciences</option>
-    <option value="Science">Science</option>
-                </select>
-            </div>
-            <button type="submit">Sign Up</button>
+          <h2>Sign Up</h2>
+          <div class="form-group">
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" name="firstName" required />
+          </div>
+          <div class="form-group">
+            <label for="last-name">Last Name</label>
+            <input type="text" id="last-name" name="lastName" required />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <div class="form-group">
+            <label for="role">Role</label>
+            <select id="role" name="role" required>
+              <option value="" disabled selected>Select a role</option>
+              <option value="Student">Student</option>
+              <option value="Tutor">Tutor</option>
+              <option value="Chief Examiner">CE</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="faculty">Faculty</label>
+            <select id="faculty" name="faculty" required>
+              <option value="" disabled selected>Select your faculty</option>
+              <option value="Arts">Arts</option>
+              <option value="Art, Design and Architecture">
+                Art, Design and Architecture
+              </option>
+              <option value="Business and Economics">
+                Business and Economics
+              </option>
+              <option value="Education">Education</option>
+              <option value="Engineering">Engineering</option>
+              <option value="Information Technology">
+                Information Technology
+              </option>
+              <option value="Law">Law</option>
+              <option value="Medicine, Nursing and Health Sciences">
+                Medicine, Nursing and Health Sciences
+              </option>
+              <option value="Pharmacy and Pharmaceutical Sciences">
+                Pharmacy and Pharmaceutical Sciences
+              </option>
+              <option value="Science">Science</option>
+            </select>
+          </div>
+          <button type="submit">Sign Up</button>
         </form>
-    <div id="success-message" style="display: none;"></div>
-    </div>
+        <div id="success-message" style="display: none"></div>
+      </div>
     </main>
-</body>
+  </body>
 </html>

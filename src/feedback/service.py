@@ -36,7 +36,6 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
 
 
 def get_feedback_highlights_by_url(user, url, db: Session):
-    print(f'url {url}')
     main_url = url.split('#')[0]
     cached_units_data = unit_temp.get_data()
     if not cached_units_data:
@@ -48,11 +47,11 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                 'action', AnnotationActionPoint.action,
                 'category', AnnotationActionPoint.category,
                 'deadline', AnnotationActionPoint.deadline,
-                'status', AnnotationActionPoint.status
+                'status', AnnotationActionPoint.status,
             )
         ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
-        .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
-                   AnnotationActionPoint.rowStatus == "ACTIVE")
+        .outerjoin(AnnotationActionPoint,( Highlight.id == AnnotationActionPoint.highlightId) 
+                   & (AnnotationActionPoint.rowStatus == "ACTIVE"))
         .filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email, 
                                                  Feedback.rowStatus == "ACTIVE")
         .group_by(Feedback.id, Highlight.id))
@@ -108,8 +107,8 @@ def get_all_user_feedback_highlights(user, db: Session):
                 'status', AnnotationActionPoint.status
             )
         ), ']').label('actionItems')).outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
-            .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
-                       AnnotationActionPoint.rowStatus == "ACTIVE")
+            .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) &
+                       ((AnnotationActionPoint.rowStatus == "ACTIVE")))
             .filter(Feedback.studentEmail == user.email, Feedback.rowStatus == "ACTIVE")
             .group_by(Feedback.id, Highlight.id))
 
@@ -240,8 +239,8 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
             )
         ), ']').label('actionItems'))
             .outerjoin(Highlight, Feedback.id == Highlight.feedbackId)
-            .outerjoin(AnnotationActionPoint, Highlight.id == AnnotationActionPoint.highlightId, 
-                       AnnotationActionPoint.rowStatus == "ACTIVE")
+            .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
+                       (AnnotationActionPoint.rowStatus == "ACTIVE"))
             .filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id, 
                     Feedback.rowStatus == "ACTIVE")
             .group_by(Feedback.id, Highlight.id))

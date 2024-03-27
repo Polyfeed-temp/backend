@@ -29,7 +29,6 @@ class UserResponse(BaseModel):
 
 def authenticate_user(db: Session, email: str, password: str):
     user = get_user_by_email(db, email, no_password=False)
-    print(user)
     if not user:
         return False
     if not verify_password(password, user.password):
@@ -78,9 +77,7 @@ async def get_current_user(req: Request, db: Session = Depends(get_db)):
     token = req.headers.get("Authorization")
 
     try:
-        print("This is token", token)
         decoded_token = auth.verify_id_token(token)
-        print(decoded_token)
         email = decoded_token.get('email')
 
         if email is None:
@@ -95,7 +92,6 @@ async def get_current_user(req: Request, db: Session = Depends(get_db)):
 
 
 def refresh_token(token):
-    print(token)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")

@@ -15,7 +15,6 @@ def get_assessments(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=AssessmentPydantic)
 def create_assessment(assessment: AssessmentPydantic, db: Session = Depends(get_db)):
-    print(assessment)
     return service.create_assessment(db, assessment)
 
 

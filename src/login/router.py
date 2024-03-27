@@ -34,8 +34,6 @@ async def login_for_access_token(response: Response,form_data: Annotated[OAuth2P
 @router.get("/verifyToken", response_model=UserPydantic)
 async def verify_token(request: Request, current_user: UserPydantic = Depends(get_current_user)):
     headers = request.headers
-    for key, value in headers.items():
-        print(f"{key}: {value}")
     return current_user
 @router.post("/refreshToken")
 def refresh_token_route(token):

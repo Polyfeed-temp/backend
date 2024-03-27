@@ -20,7 +20,6 @@ def get_user_by_email(db: Session, email: str, no_password: bool = True):
     if len(db_user) == 1:
         return db_user[0]
     else:
-        print("Here's the user", db_user)
         return None
 
 
@@ -54,10 +53,8 @@ def get_users(db: Session):
 
 def update_user(db: Session, userData: UserPydantic, email: str):
     db_user = db.query(User).filter(User.email == email).all()
-    print(db_user[0])
     if len(db_user) == 1:
         for field, value in userData.model_dump().items():
-            print(field, value)
             if isinstance(getattr(User, field).type, Enum):
                 value = getattr(User, field).type(value)
             setattr(db_user[0], field, value)

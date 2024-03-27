@@ -12,7 +12,6 @@ def get_highlights_url(url: str, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=FeedbackHighlightPydantic)
 def create_highlight(highlight: FeedbackHighlightPydantic, db: Session = Depends(get_db)):
-    print(highlight)
     return service.create_highlight(db, highlight)
 
 @router.get("/all", response_model=List[FeedbackHighlightPydantic])

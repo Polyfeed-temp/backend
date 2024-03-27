@@ -77,7 +77,6 @@ def get_all_units_with_assessments(db: Session):
         unit_dict =json.loads(unit)
         if assessments:
             unit_dict['assessments'] = json.loads(assessments)
-            print(unit_dict)
         all_units.append(unit_dict)
 
     cached_units_data.insert_data(all_units)
