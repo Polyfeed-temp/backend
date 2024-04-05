@@ -14,13 +14,20 @@ newgrp docker
 ### build image
 
 ```
+Dev:
 docker image build --tag polyfeed-backend .
+
+Production:
+docker image build --tag polyfeed-backend-prod .
 ```
 
 ### run container
 
 ```
 docker run -d -p 8000:8000 polyfeed-backend
+
+docker run -d -p 8002:8002 polyfeed-backend-prod
+
 ```
 
 ### Apache Http server config
@@ -47,3 +54,7 @@ added the follow configuration on /etc/httpd/conf/httpd.conf
 
 </VirtualHost>
 ```
+
+### reload the httpd
+
+sudo systemctl restart httpd
