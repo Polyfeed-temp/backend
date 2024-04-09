@@ -57,8 +57,8 @@ def patch_assessment_feedback_route(feedback_id, assessment_id, db: Session = De
     return True
 
 @router.post("/rate/gpt/{feedbackId}")
-def rate_gpt_response_route(feedbackId, rating:int,db: Session = Depends(get_db), user = Depends(get_current_user)):
-    if not rate_gpt_response(feedbackId, rating, db, user):
+def rate_gpt_response_route(feedbackId, rating:int, attemptTime:int,db: Session = Depends(get_db), user = Depends(get_current_user)):
+    if not rate_gpt_response(feedbackId, rating, db, user,attemptTime):
         raise HTTPException(status_code=404, detail="Feedback not found")
     return True
 @router.get("/assessment/{assessment_id}")

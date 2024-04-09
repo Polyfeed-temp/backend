@@ -76,6 +76,9 @@ async def get_current_user(req: Request, db: Session = Depends(get_db)):
 
     token = req.headers.get("Authorization")
 
+    if not token:
+        raise credentials_exception
+
     try:
         decoded_token = auth.verify_id_token(token)
         email = decoded_token.get('email')

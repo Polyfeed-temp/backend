@@ -91,7 +91,10 @@ def get_feedback_highlights_by_url(user, url, db: Session):
 
 
     return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
-            "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, "highlights":feedbackHighlights, }
+                "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, 
+                    "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, 
+                    "gptResponseRating_2":feedback.gptResponseRating_2, "gptQueryText_2": feedback.gptQueryText_2,"gptResponse_2":feedback.gptResponse_2, 
+                    "highlights":feedbackHighlights, }
 
 def get_all_user_feedback_highlights(user, db: Session):
     # cached_units_data = unit_temp.get_data()
@@ -177,12 +180,16 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
             return True
         else:
             return False
-def rate_gpt_response(feedbackId:int, rating:int,db: Session, user):
+        
+def rate_gpt_response(feedbackId:int, rating:int,db: Session, user,attemptTime):
 
         feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
 
         if feedback and feedback.studentEmail == user.email:
-            feedback.gptResponseRating = rating
+            if attemptTime ==1 :
+                feedback.gptResponseRating = rating
+            else:
+                feedback.gptResponseRating_2 = rating
             db.commit()
             return True
         else:
