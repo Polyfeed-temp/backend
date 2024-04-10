@@ -14,7 +14,7 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
     response = service.explain_further(content.content)
     if response:
         try:
-            print("content",content)
+            
             # Update the Feedback entry
             if content.attemptTime == 1:
                 db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
@@ -28,7 +28,10 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
                         Feedback.gptResponse_2: response.content,
                         Feedback.gptQueryText_2: content.content
                     }, synchronize_session='fetch')
-                db.commit()
+            
+            db.commit()
+            
+
             return response
         except Exception as e:
             db.rollback()
