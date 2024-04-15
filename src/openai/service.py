@@ -30,6 +30,5 @@ def chat_completion(prompt):
     # return response.choices[0].text
     return question("system", prompt)
 
-def explain_further(content:str):
-    prompt = "Explain the following content in dot points:\n\n" + content + "\n\nExplaination:"
+def explain_further(prompt:str):
     return chat_completion(prompt)

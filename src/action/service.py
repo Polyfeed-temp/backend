@@ -31,11 +31,13 @@ def update_action_points(highlight_id, action_points: List[ActionPydantic], db: 
     # Commit the transaction
     db.commit()
     return True
+
 def update_action_status(action_id, status, db):
     db_action = db.query(AnnotationActionPoint).filter(AnnotationActionPoint.id == action_id).first()
     if not db_action:
         return False
-    db_action.status = int(status)
+    
+    db_action.status = 1 if status else 0
     db.commit()
     return True
 

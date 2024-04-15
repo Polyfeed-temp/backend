@@ -7,3 +7,8 @@ class ExplainFutherContentPydantic(BaseModel):
 
 class ResponseExplain(BaseModel):
     content: str
+
+
+
+class CommonThemeResult(BaseModel):
+    status: bool
