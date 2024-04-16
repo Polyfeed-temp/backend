@@ -56,3 +56,8 @@ def main(request: Request):
 @app.get('/guide', response_class=HTMLResponse)
 def main(request: Request):
     return templates.TemplateResponse('guide.html', {'request': request})
+
+
+@app.get('/privacypolicy', response_class=HTMLResponse)
+def main(request: Request):
+    return templates.TemplateResponse('privacypolicy.html', {'request': request})
