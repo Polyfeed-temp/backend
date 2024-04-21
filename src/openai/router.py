@@ -77,6 +77,9 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
                    .join(Feedback, Feedback.id == Highlight.feedbackId)\
                    .filter((Feedback.studentEmail == user.email) & (Highlight.commonTheme == None))\
                    .all()
+    
+    if len(highlights) == 0:
+        return True
 
     for commonTheme in commonThemes:
         if commonTheme[0]:  # Adjusted to handle tuple from query result
@@ -96,9 +99,6 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
 
         results = json.loads(response.content)
 
-        print("results",results)
-
-
         for result in results:
             print(f"Highlight ID: {result['highlightId']}, Common Theme: {result['commonTheme']}")
             db.query(Highlight)\
@@ -108,10 +108,10 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
                   synchronize_session='fetch'
               )
         db.commit()
+        return True
     except Exception as e:
         print(f"Error updating database: {e}")
         db.rollback()
         # raise HTTPException(status_code=500, detail="Internal Server Error") from e
         return False
 
-    return True
