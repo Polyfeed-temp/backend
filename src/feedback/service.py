@@ -19,14 +19,17 @@ def get_feedback_summumary_by_assessment_id(assessment_id: int, db: Session):
     return db.query(Feedback).join(Highlight, (Feedback.highlight_id == Highlight.id) & (Highlight.rowStatus == "ACTIVE")).filter(Feedback.assessment_id == assessment_id).all()
 
 def create_feedback(feedback:FeedbackBasePydantic, db: Session):
-    feedback.url = str(feedback.url)
-    feedback_model = Feedback(**feedback.model_dump())
-    db.add(feedback_model)
-    db.commit()
     try:
+        feedback.url = str(feedback.url)
+        feedback_model = Feedback(**feedback.model_dump())
+
+
+        db.add(feedback_model)
+        db.commit()
         db.refresh(feedback_model)
         return feedback_model
     except SQLAlchemyError as e:
+        print("error in creating feedback" , e)
         update_feedback = db.query(Feedback).filter(Feedback.url == feedback.url, Feedback.studentEmail == feedback.studentEmail).first()
         return update_feedback
 

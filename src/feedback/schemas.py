@@ -6,7 +6,7 @@ from src.highlight.schemas import CompleteHighlight
 
 class FeedbackBasePydantic(BaseModel):
     id: Optional[int] = None
-    mark: int
+    mark: float
     clarity: Optional[int] = None
     personalise: Optional[int] = None
     usability: Optional[int] = None
@@ -20,7 +20,6 @@ class FeedbackBasePydantic(BaseModel):
 
 class FeedbackWithHighlights(FeedbackBasePydantic):
     highlights: List[CompleteHighlight]
-
 
 class FeedbackRating(BaseModel):
     clarity: int

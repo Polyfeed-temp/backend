@@ -37,7 +37,11 @@ def create_highlight(db: Session, highlight_data: CompleteHighlight):
 
     if highlight_data.actionItems:
         for action in highlight_data.actionItems:
-            db_action= AnnotationActionPoint(action=action.action, category=action.category.value, deadline=action.deadline, highlightId=str(highlight.id) )
+            db_action= AnnotationActionPoint(action=action.action, 
+                                             category=action.category.value, 
+                                             deadline=action.deadline, 
+                                             highlightId=str(highlight.id),
+                                             rowStatus="ACTIVE")
             db.add(db_action)
 
     db.commit()
