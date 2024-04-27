@@ -50,8 +50,9 @@ def delete_unit(db: Session, unitCode: str):
         return False
 def get_all_units_with_assessments(db: Session):
     # global cached_units_data
-    if cached_units_data.get_data():
-        return cached_units_data.get_data()
+    # if cached_units_data.get_data():
+    #     return cached_units_data.get_data()
+    
     subquery = (
         db.query(func.concat('[', func.group_concat(
             func.json_object('assessmentName', Assessment.assessmentName, 'id', Assessment.id)
@@ -79,5 +80,5 @@ def get_all_units_with_assessments(db: Session):
             unit_dict['assessments'] = json.loads(assessments)
         all_units.append(unit_dict)
 
-    cached_units_data.insert_data(all_units)
+    # cached_units_data.insert_data(all_units)
     return all_units
