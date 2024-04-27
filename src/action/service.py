@@ -23,6 +23,7 @@ def update_action_points(highlight_id, action_points: List[ActionPydantic], db: 
 
             db_action.deadline=action_point.deadline
             db_action.status=action_point.status or False
+            db_action.action=action_point.action
         else:
             db_action = AnnotationActionPoint(
                 action=action_point.action,
