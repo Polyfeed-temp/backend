@@ -5,6 +5,6 @@ if __name__ == '__main__':
                 "src.main:app",
                 host="0.0.0.0",
                 # dev = 8000, production = 8002
-                port=8000,
+                port=8002,
                 reload=True
-                )
+            )
