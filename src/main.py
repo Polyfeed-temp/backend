@@ -61,3 +61,8 @@ def main(request: Request):
 @app.get('/privacypolicy', response_class=HTMLResponse)
 def main(request: Request):
     return templates.TemplateResponse('privacypolicy.html', {'request': request})
+
+
+@app.get('/about-learner-centered-feedback', response_class=HTMLResponse)
+def main(request: Request):
+    return templates.TemplateResponse('learner-centered-feedback.html', {'request': request})

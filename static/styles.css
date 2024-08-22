@@ -143,13 +143,17 @@ footer p {
   text-align: center;
   width: 250px;
   text-align: left;
-  height: 200px;
   margin-top: 20px;
 }
 
-h3 {
-  /* margin-bottom: 20px; */
-  flex: 1;
+/* Apply height of 450px to the first three elements */
+.data-collection-div:nth-child(-n + 3) {
+  height: 450px;
+}
+
+/* Apply height of 250px to the rest of the elements */
+.data-collection-div:nth-child(n + 4) {
+  height: 250px;
 }
 
 .policies-main {

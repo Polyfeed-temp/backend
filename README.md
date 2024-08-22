@@ -25,9 +25,7 @@ docker image build --tag polyfeed-backend-prod .
 
 ```
 docker run -d -p 8000:8000 polyfeed-backend
-
 docker run -d -p 8002:8002 polyfeed-backend-prod
-
 ```
 
 ### Apache Http server config
