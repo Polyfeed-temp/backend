@@ -13,7 +13,7 @@ def question(role, content):
         # this is an error to be printed out
     else:
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": role, "content": content}
                 # role: system. content: "Compose a poem that explains the concept of recursion in programming."

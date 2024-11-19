@@ -1,0 +1,7 @@
+CREATE TABLE File (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    feedback_id INT,
+    file_content LONGTEXT NOT NULL, -- Storing the Base64 encoded PDF content
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+);

@@ -8,7 +8,7 @@ from app import question
 import os
 import tiktoken
 
-encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+encoding = tiktoken.encoding_for_model("gpt-4o-mini")
 
 os.environ.get("OPENAI_API_KEY")
 
