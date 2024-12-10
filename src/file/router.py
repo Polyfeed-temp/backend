@@ -10,7 +10,7 @@ router = APIRouter()
 def create_file(file: FileCreate, db: Session = Depends(get_db)):
     return service.create_file(db, file)
 
-@router.get("/list/{feedback_id}", response_model=List[File])
+@router.get("/list/{feedback_id}", response_model=list[File])
 def get_files_by_feedback(
     feedback_id: int,
     db: Session = Depends(get_db),
