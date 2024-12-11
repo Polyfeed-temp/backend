@@ -31,6 +31,8 @@ app.add_middleware(CORSMiddleware,  allow_origins=["*"],
     allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PATCH"],
     allow_headers=["Content-Type","Set-Cookie", "Authorization"])
 
+app.body_limit = 100 * 1024 * 1024  # 100MB in bytes
+
 
 
 # app.include_router(annotation_router.router, prefix="/api/annotation", tags=["annotation"], dependencies=[Depends(oauth2_scheme)])
