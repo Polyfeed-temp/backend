@@ -97,7 +97,9 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
         # Simulate external service call
         response = service.explain_further(prompt)
 
-        results = json.loads(response.content)
+        cleaned_content = response.content.replace('```json', '').replace('```', '').strip()
+
+        results = json.loads(cleaned_content)
 
         for result in results:
             print(f"Highlight ID: {result['highlightId']}, Common Theme: {result['commonTheme']}")
