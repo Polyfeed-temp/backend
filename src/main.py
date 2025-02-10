@@ -9,6 +9,7 @@ from src.highlight import router as highlight_router
 from src.action import router as action_router
 from src.log import router as log_router
 from src.file import router as file_router
+from src.feedback_request import router as feedback_request_router
 
 
 from starlette.middleware.sessions import SessionMiddleware
@@ -48,6 +49,7 @@ app.include_router(openai_router.router, prefix="/api/openai", tags=["openai"])
 app.include_router(file_router.router, prefix="/api/file", tags=["file"])
 # logs route
 app.include_router(log_router.router, prefix="/api/logs", tags=["logs"])
+app.include_router(feedback_request_router.router, prefix="/api/feedback-requests", tags=["feedback-requests"])
 
 
 @app.get("/healthcheck",tags=["health check"])
