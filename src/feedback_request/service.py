@@ -8,28 +8,43 @@ def generate_ai_feedback(rubric_items, previous_feedback):
     # Convert RubricItems to dict for JSON serialization
     rubric_items_dict = [item.model_dump() for item in rubric_items]
     
-    # Prompt for AI_RubricItem
+    # Prompt for AI analysis
     rubric_prompt = f"""
-    Based on these rubric items: {json.dumps(rubric_items_dict)}
-    And previous feedback usage: {previous_feedback}
-    Please analyze the rubric items and provide detailed feedback suggestions.
-    """
-    ai_rubric_response = explain_further(rubric_prompt)
+    You are given a dataset with student feedback requests for <unit code> <unit name>, which specifies the rubric items and their specific feedback requests. In some cases, the rubric item is not mentioned, or the feedback request is very general. Your task is to generate two summaries: 
+    Summary Table: 
+    Create a table that shows the number of feedback requests per category. 
+    For each category, include a brief description of the type of feedback requests typically found in that category. 
+    List of Feedback Requests: 
+    List the feedback requests under their corresponding rubric item or category. 
+    If the rubric item is not mentioned or the request is very general, categorize it under a new category that reflects the request. 
+    Organize the list so that each rubric item or category has a list of the feedback requests associated with it. 
+    The feedback request categories should be based on common rubric items or, if unspecified, under new categories that capture the nature of the feedback request. 
 
-    # Prompt for AI_FBRequest
-    feedback_prompt = f"""
-    Given the rubric items: {json.dumps(rubric_items_dict)}
-    And previous feedback: {previous_feedback}
-    Please generate a comprehensive feedback request that addresses all rubric items.
-    Focus on areas that need improvement and specific suggestions.
-    """
-    ai_feedback_response = explain_further(feedback_prompt)
+    Return the two summaries as JSON files: 
+    The first file should contain a summary table with the following structure: [ {{ "category": "Category Name", "feedback_count": Number of feedback requests in this category, "description": "Brief description of the types of feedback in this category" }} ] 
+    The second file should contain a list of feedback requests, categorized under their rubric items or new categories: {{ "Category Name": [ "Feedback Request 1", "Feedback Request 2", ... ] }}
 
-    return ai_rubric_response.content, ai_feedback_response.content
+    Ensure the summaries are well-structured and easy to understand. 
+    Data Set: {json.dumps(rubric_items_dict)}
+    Previous feedback: {previous_feedback}
+    """
+    ai_response = explain_further(rubric_prompt)
+    print("ai_response", ai_response)
+
+    # Extract the two JSON objects from the response
+    content = ai_response.content
+    json_strings = content.split('```json\n')[1:]  # Split and remove the first empty part
+    json_strings = [s.split('```')[0].strip() for s in json_strings]  # Remove the closing ```
+
+    # Parse both JSON objects
+    summary_table = json_strings[0]  # First JSON object (summary table)
+    feedback_requests = json_strings[1]  # Second JSON object (feedback requests)
+
+    return summary_table, feedback_requests
 
 def create_feedback_request(db: Session, request: FeedbackRequestPydantic, student_id: str):
     # Generate AI feedback
-    ai_rubric, ai_feedback = generate_ai_feedback(
+    summary_response, categorized_response = generate_ai_feedback(
         request.rubricItems,
         request.previousFeedbackUsage
     )
@@ -41,8 +56,8 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
         assignmentId=request.assignmentId,
         rubricItems=json.dumps(rubric_items_dict),  # Store as JSON string
         previousFeedbackUsage=request.previousFeedbackUsage,
-        AI_RubricItem=ai_rubric,
-        AI_FBRequest=ai_feedback,
+        AI_RubricItem=summary_response,      # Store summary table JSON
+        AI_FBRequest=categorized_response,   # Store feedback requests JSON
         student_id=student_id
     )
     
