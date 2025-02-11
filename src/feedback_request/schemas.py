@@ -1,19 +1,27 @@
-from pydantic import BaseModel
-from typing import List, Optional
-from uuid import UUID
+from typing import Optional, List
+from pydantic import BaseModel, field_validator
+import json
 
 class RubricItem(BaseModel):
-    id: UUID
     item: str
     comments: str
 
-class FeedbackRequestCreate(BaseModel):
+class FeedbackRequestPydantic(BaseModel):
+    id: Optional[int] = None
     assignmentId: int
     rubricItems: List[RubricItem]
     previousFeedbackUsage: str
-
-class FeedbackRequestResponse(FeedbackRequestCreate):
-    id: int
-    aiRubricItems: Optional[List[RubricItem]] = None
+    student_id: Optional[str] = None
     AI_RubricItem: Optional[str] = None
-    AI_FBRequest: Optional[str] = None 
+    AI_FBRequest: Optional[str] = None
+
+    @field_validator('rubricItems', mode='before')
+    @classmethod
+    def parse_rubric_items(cls, value):
+        if isinstance(value, str):
+            items = json.loads(value)
+            return [RubricItem(**item) for item in items]
+        return value
+
+    class Config:
+        from_attributes = True
