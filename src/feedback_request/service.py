@@ -4,49 +4,82 @@ from .schemas import FeedbackRequestPydantic
 from src.openai.service import explain_further
 import json
 
-def generate_ai_feedback(rubric_items, previous_feedback):
+def get_existing_feedback_requests(db: Session, assignment_id: int):
+    """Get existing feedback requests for an assignment"""
+    return db.query(FeedbackRequest)\
+        .filter(FeedbackRequest.assignmentId == assignment_id)\
+        .all()
+
+def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
     # Convert RubricItems to dict for JSON serialization
     rubric_items_dict = [item.model_dump() for item in rubric_items]
     
-    # Prompt for AI analysis
-    rubric_prompt = f"""
-    You are given a dataset with student feedback requests for <unit code> <unit name>, which specifies the rubric items and their specific feedback requests. In some cases, the rubric item is not mentioned, or the feedback request is very general. Your task is to generate two summaries: 
-    Summary Table: 
-    Create a table that shows the number of feedback requests per category. 
-    For each category, include a brief description of the type of feedback requests typically found in that category. 
-    List of Feedback Requests: 
-    List the feedback requests under their corresponding rubric item or category. 
-    If the rubric item is not mentioned or the request is very general, categorize it under a new category that reflects the request. 
-    Organize the list so that each rubric item or category has a list of the feedback requests associated with it. 
-    The feedback request categories should be based on common rubric items or, if unspecified, under new categories that capture the nature of the feedback request. 
+    # Check if this is the first time for this assignment
+    existing_requests = get_existing_feedback_requests(db, assignment_id)
+    
+    if not existing_requests:
+        # First time prompt
+        prompt = f"""
+        You are given a dataset with student feedback requests for <unit code> <unit name>, which specifies the rubric items and their specific feedback requests. 
+        In some cases, the rubric item is not clear, or the feedback request is very general. 
+        Your task is to generate a concise and clear rubric item and return the dataset with the additional column in a json format as []. 
+        Please return your response in JSON format enclosed in ```json blocks.
+        
+        Data Set: {json.dumps(rubric_items_dict)}
+        """
+    else:
+        # Create Dataset B from existing requests
+        existing_data = []
+        for req in existing_requests:
+            existing_data.append({
+                "rubricItems": json.loads(req.rubricItems) if isinstance(req.rubricItems, str) else req.rubricItems,
+                "AI_RubricItem": req.AI_RubricItem
+            })
 
-    Return the two summaries as JSON files: 
-    The first file should contain a summary table with the following structure: [ {{ "category": "Category Name", "feedback_count": Number of feedback requests in this category, "description": "Brief description of the types of feedback in this category" }} ] 
-    The second file should contain a list of feedback requests, categorized under their rubric items or new categories: {{ "Category Name": [ "Feedback Request 1", "Feedback Request 2", ... ] }}
+        # Subsequent times prompt
+        prompt = f"""
+        You are given dataset A, which a student of <> unit has requested feedback for assignment {assignment_id}. 
+        It has a Rubric Item, FeedbackRequest. In some cases, the rubric item is not mentioned, or the feedback request is not clear. 
+        You are also given the dataset B of existing Rubric Items, Feedback Requests and AI generated rubric items.
+        Your task is to generate an additional column to the Dataset A. 
+        You should attempt to map the new values to the existing AI_Rubric Items in Dataset B.
+        If they don't map to the existing values or the existing values are empty you may create a new AI_Rubric Item.
+        Please return your response in JSON format enclosed in ```json blocks.
 
-    Ensure the summaries are well-structured and easy to understand. 
-    Data Set: {json.dumps(rubric_items_dict)}
-    Previous feedback: {previous_feedback}
-    """
-    ai_response = explain_further(rubric_prompt)
+        Data Set A: {json.dumps(rubric_items_dict)}
+        Data Set B: {json.dumps(existing_data)}
+        """
+
+    ai_response = explain_further(prompt)
     print("ai_response", ai_response)
 
-    # Extract the two JSON objects from the response
+    # Extract the JSON from the response
     content = ai_response.content
-    json_strings = content.split('```json\n')[1:]  # Split and remove the first empty part
-    json_strings = [s.split('```')[0].strip() for s in json_strings]  # Remove the closing ```
-
-    # Parse both JSON objects
-    summary_table = json_strings[0]  # First JSON object (summary table)
-    feedback_requests = json_strings[1]  # Second JSON object (feedback requests)
-
-    return summary_table, feedback_requests
+    try:
+        # Try to find JSON block
+        if '```json' in content:
+            json_part = content.split('```json\n')[1].split('```')[0].strip()
+        else:
+            # If no JSON blocks, try to extract JSON directly
+            json_part = content.strip()
+        
+        print("Extracted JSON:", json_part)
+        
+        # Validate it's proper JSON
+        json.loads(json_part)  # This will raise an error if invalid JSON
+        return json_part
+        
+    except Exception as e:
+        print(f"Error parsing AI response: {e}")
+        # Return a simple JSON array as fallback
+        return json.dumps([{"error": "Failed to parse AI response"}])
 
 def create_feedback_request(db: Session, request: FeedbackRequestPydantic, student_id: str):
     # Generate AI feedback
-    summary_response, categorized_response = generate_ai_feedback(
+    ai_rubric_response = generate_ai_feedback(
+        db,
         request.rubricItems,
-        request.previousFeedbackUsage
+        request.assignmentId
     )
 
     # Convert RubricItems to dict for JSON serialization
@@ -54,10 +87,8 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
 
     new_request = FeedbackRequest(
         assignmentId=request.assignmentId,
-        rubricItems=json.dumps(rubric_items_dict),  # Store as JSON string
-        previousFeedbackUsage=request.previousFeedbackUsage,
-        AI_RubricItem=summary_response,      # Store summary table JSON
-        AI_FBRequest=categorized_response,   # Store feedback requests JSON
+        rubricItems=json.dumps(rubric_items_dict),
+        AI_RubricItem=ai_rubric_response,
         student_id=student_id
     )
     
@@ -70,9 +101,7 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
         id=new_request.id,
         assignmentId=new_request.assignmentId,
         rubricItems=new_request.get_rubric_items(),
-        previousFeedbackUsage=new_request.previousFeedbackUsage,
         AI_RubricItem=new_request.AI_RubricItem,
-        AI_FBRequest=new_request.AI_FBRequest,
         student_id=new_request.student_id
     )
     return response
@@ -84,13 +113,10 @@ def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: in
         .limit(limit)\
         .all()
     
-    # Convert each request to the Pydantic model
     return [FeedbackRequestPydantic(
         id=req.id,
         assignmentId=req.assignmentId,
         rubricItems=req.get_rubric_items(),
-        previousFeedbackUsage=req.previousFeedbackUsage,
         AI_RubricItem=req.AI_RubricItem,
-        AI_FBRequest=req.AI_FBRequest,
         student_id=req.student_id
     ) for req in requests] 

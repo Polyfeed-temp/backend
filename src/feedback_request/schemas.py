@@ -10,10 +10,8 @@ class FeedbackRequestPydantic(BaseModel):
     id: Optional[int] = None
     assignmentId: int
     rubricItems: List[RubricItem]
-    previousFeedbackUsage: str
     student_id: Optional[str] = None
     AI_RubricItem: Optional[str] = None
-    AI_FBRequest: Optional[str] = None
 
     @field_validator('rubricItems', mode='before')
     @classmethod
