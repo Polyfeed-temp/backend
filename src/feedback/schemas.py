@@ -11,6 +11,8 @@ class FeedbackBasePydantic(BaseModel):
     personalise: Optional[int] = None
     usability: Optional[int] = None
     emotion: Optional[int] = None
+    furtherQuestions: Optional[str] = None
+    comment: Optional[str] = None
     markerEmail: Optional[str] = None
     studentEmail: str
     assessmentId: int
@@ -27,3 +29,5 @@ class FeedbackRating(BaseModel):
     evaluativeJudgement: int
     usability: int
     emotion: int
+    furtherQuestions: str
+    comment: str

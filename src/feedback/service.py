@@ -97,7 +97,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                 "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, 
                     "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, 
                     "gptResponseRating_2":feedback.gptResponseRating_2, "gptQueryText_2": feedback.gptQueryText_2,"gptResponse_2":feedback.gptResponse_2, 
-                    "highlights":feedbackHighlights, }
+                    "highlights":feedbackHighlights, "furtherQuestions":feedback.furtherQuestions, "comment":feedback.comment }
 
 def get_all_user_feedback_highlights(user, db: Session):
     # cached_units_data = unit_temp.get_data()
@@ -179,6 +179,8 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
             feedback.personalise = rating.personalise
             feedback.usability = rating.usability
             feedback.emotion = rating.emotion
+            feedback.furtherQuestions = rating.furtherQuestions
+            feedback.comment = rating.comment
             db.commit()
             return True
         else:
