@@ -7,6 +7,7 @@ from src.highlight.schemas import CompleteHighlight
 class FeedbackBasePydantic(BaseModel):
     id: Optional[int] = None
     mark: float
+    totalMark: int
     clarity: Optional[int] = None
     personalise: Optional[int] = None
     usability: Optional[int] = None
