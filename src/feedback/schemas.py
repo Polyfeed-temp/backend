@@ -17,7 +17,7 @@ class FeedbackBasePydantic(BaseModel):
     markerEmail: Optional[str] = None
     studentEmail: str
     assessmentId: int
-    performance: str = None
+    performance: Optional[int] = None
     feedbackUseful: str = None
     url: HttpUrl
 
@@ -25,6 +25,7 @@ class FeedbackWithHighlights(FeedbackBasePydantic):
     highlights: List[CompleteHighlight]
 
 class FeedbackRating(BaseModel):
+    performance: int
     clarity: int
     personalise: int
     evaluativeJudgement: int

@@ -93,7 +93,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                         break
 
 
-    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
+    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "performance": feedback.performance, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
                 "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, 
                     "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, 
                     "gptResponseRating_2":feedback.gptResponseRating_2, "gptQueryText_2": feedback.gptQueryText_2,"gptResponse_2":feedback.gptResponse_2, 
@@ -174,6 +174,7 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
         feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
 
         if feedback and feedback.studentEmail == user.email:
+            feedback.performance = rating.performance
             feedback.clarity = rating.clarity
             feedback.evaluativeJudgement = rating.evaluativeJudgement
             feedback.personalise = rating.personalise
@@ -296,7 +297,7 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
                         break
 
     return {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
-            "studentEmail": feedback.studentEmail, "clarity": feedback.clarity,
+            "studentEmail": feedback.studentEmail, "performance": feedback.performance, "clarity": feedback.clarity,
             "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise,
             "usability": feedback.usability, "emotion": feedback.emotion,
             "mark": feedback.mark, "unitCode": unit_code, "assess mentName": assessment_name,
@@ -335,7 +336,7 @@ def get_feedbacks_by_user_email(email, db: Session):
         feedback_entry = feedbacks_dict.setdefault(feedback.id, {
             "id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
             "studentEmail": feedback.studentEmail, "mark": feedback.mark, 
-            "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, 
+            "performance": feedback.performance, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, 
             "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
             "highlights": []
         })
