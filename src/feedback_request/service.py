@@ -75,7 +75,18 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
         return json.dumps([{"error": "Failed to parse AI response"}])
 
 def create_feedback_request(db: Session, request: FeedbackRequestPydantic, student_id: str):
+    # Check if request already exists for this assignment and student
+    existing_request = db.query(FeedbackRequest)\
+        .filter(
+            FeedbackRequest.assignmentId == request.assignmentId,
+            FeedbackRequest.student_id == student_id
+        )\
+        .first()
+
     # Generate AI feedback
+    print("request.rubricItems", request.rubricItems)
+    print("request.assignmentId", request.assignmentId)
+    print("student_id", student_id)
     ai_rubric_response = generate_ai_feedback(
         db,
         request.rubricItems,
@@ -85,26 +96,42 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
     # Convert RubricItems to dict for JSON serialization
     rubric_items_dict = [item.model_dump() for item in request.rubricItems]
 
-    new_request = FeedbackRequest(
-        assignmentId=request.assignmentId,
-        rubricItems=json.dumps(rubric_items_dict),
-        AI_RubricItem=ai_rubric_response,
-        student_id=student_id
-    )
-    
-    db.add(new_request)
-    db.commit()
-    db.refresh(new_request)
-    
-    # Convert the response
-    response = FeedbackRequestPydantic(
-        id=new_request.id,
-        assignmentId=new_request.assignmentId,
-        rubricItems=new_request.get_rubric_items(),
-        AI_RubricItem=new_request.AI_RubricItem,
-        student_id=new_request.student_id
-    )
-    return response
+    if existing_request:
+        # Update existing request
+        existing_request.rubricItems = json.dumps(rubric_items_dict)
+        existing_request.AI_RubricItem = ai_rubric_response
+        db.commit()
+        db.refresh(existing_request)
+        
+        response = FeedbackRequestPydantic(
+            id=existing_request.id,
+            assignmentId=existing_request.assignmentId,
+            rubricItems=existing_request.get_rubric_items(),
+            AI_RubricItem=existing_request.AI_RubricItem,
+            student_id=existing_request.student_id
+        )
+        return response
+    else:
+        # Create new request
+        new_request = FeedbackRequest(
+            assignmentId=request.assignmentId,
+            rubricItems=json.dumps(rubric_items_dict),
+            AI_RubricItem=ai_rubric_response,
+            student_id=student_id
+        )
+        
+        db.add(new_request)
+        db.commit()
+        db.refresh(new_request)
+        
+        response = FeedbackRequestPydantic(
+            id=new_request.id,
+            assignmentId=new_request.assignmentId,
+            rubricItems=new_request.get_rubric_items(),
+            AI_RubricItem=new_request.AI_RubricItem,
+            student_id=new_request.student_id
+        )
+        return response
 
 def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: int = 100):
     requests = db.query(FeedbackRequest)\
@@ -119,4 +146,24 @@ def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: in
         rubricItems=req.get_rubric_items(),
         AI_RubricItem=req.AI_RubricItem,
         student_id=req.student_id
-    ) for req in requests] 
+    ) for req in requests]
+
+def get_feedback_request_by_assignment(db: Session, assignment_id: int, student_id: str):
+    """Get a single feedback request for a specific assignment and student"""
+    request = db.query(FeedbackRequest)\
+        .filter(
+            FeedbackRequest.assignmentId == assignment_id,
+            FeedbackRequest.student_id == student_id
+        )\
+        .first()
+    
+    if not request:
+        return None
+        
+    return FeedbackRequestPydantic(
+        id=request.id,
+        assignmentId=request.assignmentId,
+        rubricItems=request.get_rubric_items(),
+        AI_RubricItem=request.AI_RubricItem,
+        student_id=request.student_id
+    ) 

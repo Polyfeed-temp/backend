@@ -20,17 +20,24 @@ def get_feedback_summumary_by_assessment_id(assessment_id: int, db: Session):
 
 def create_feedback(feedback:FeedbackBasePydantic, db: Session):
     try:
-        feedback.url = str(feedback.url)
-        feedback_model = Feedback(**feedback.model_dump())
-
-
+        print("feedback", feedback)
+        feedback_dict = feedback.model_dump()
+        # Ensure feedbackUseful is never None
+        feedback_dict['feedbackUseful'] = feedback_dict.get('feedbackUseful') or ''
+        feedback_dict['url'] = str(feedback.url)
+        
+        feedback_model = Feedback(**feedback_dict)
         db.add(feedback_model)
         db.commit()
         db.refresh(feedback_model)
         return feedback_model
     except SQLAlchemyError as e:
         print("error in creating feedback" , e)
-        update_feedback = db.query(Feedback).filter(Feedback.url == feedback.url, Feedback.studentEmail == feedback.studentEmail).first()
+        db.rollback()  # Add rollback here
+        update_feedback = db.query(Feedback).filter(
+            Feedback.url == feedback.url, 
+            Feedback.studentEmail == feedback.studentEmail
+        ).first()
         return update_feedback
 
 def get_highlights_from_feedback(feedback_id: int, db: Session):

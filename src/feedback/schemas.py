@@ -18,7 +18,7 @@ class FeedbackBasePydantic(BaseModel):
     studentEmail: str
     assessmentId: int
     performance: Optional[int] = None
-    feedbackUseful: str = None
+    feedbackUseful: Optional[str] = ''
     url: HttpUrl
 
 class FeedbackWithHighlights(FeedbackBasePydantic):
