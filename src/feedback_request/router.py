@@ -25,6 +25,18 @@ def get_requests(
 ):
     return get_feedback_requests(db, student_id=current_user.email, skip=skip, limit=limit)
 
+
+@router.get("/student/{email}", response_model=List[FeedbackRequestPydantic])
+def get_requests_by_email(
+    email: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+):
+    return get_feedback_requests(db, student_id=email, skip=skip, limit=limit)
+
+
+
 @router.get("/{assignment_id}", response_model=FeedbackRequestPydantic)
 def get_request_by_assignment(
     assignment_id: int,
@@ -33,3 +45,4 @@ def get_request_by_assignment(
 ):
     """Get feedback request for a specific assignment"""
     return get_feedback_request_by_assignment(db, assignment_id, current_user.email) 
+
