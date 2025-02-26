@@ -43,7 +43,7 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
                 db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
                     {
                         Feedback.gptResponse: response.content,
-                        Feedback.gptQueryText: query
+                        Feedback.gptQueryText: content.content
                     }, synchronize_session='fetch')
             else:
                 db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
