@@ -49,7 +49,7 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
                 db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
                     {
                         Feedback.gptResponse_2: response.content,
-                        Feedback.gptQueryText_2: query
+                        Feedback.gptQueryText_2: content.content
                     }, synchronize_session='fetch')
             
             db.commit()
