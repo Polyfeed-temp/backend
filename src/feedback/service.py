@@ -47,9 +47,7 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
 
 def get_feedback_highlights_by_url(user, url, db: Session):
     main_url = url.split('#')[0]
-    cached_units_data = unit_temp.get_data()
-    if not cached_units_data:
-        cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
+    cached_units_data = get_all_units_with_assessments(db)
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
