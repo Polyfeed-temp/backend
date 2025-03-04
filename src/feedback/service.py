@@ -343,6 +343,7 @@ def get_feedbacks_by_user_email(email, db: Session):
             "studentEmail": feedback.studentEmail, "mark": feedback.mark, 
             "performance": feedback.performance, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, 
             "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
+            "furtherQuestions": feedback.furtherQuestions, "comment": feedback.comment,
             "highlights": []
         })
 
