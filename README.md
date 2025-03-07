@@ -15,10 +15,16 @@ newgrp docker
 
 ```
 Dev:
-docker image build --tag polyfeed-backend .
+sudo docker build -t polyfeed-backend . && \
+sudo docker stop polyfeed-backend || true && \
+sudo docker rm polyfeed-backend || true && \
+sudo docker run -d -p 8000:8000 --name polyfeed-backend --network host polyfeed-backend
 
 Production:
-docker image build --tag polyfeed-backend-prod .
+sudo docker build -t polyfeed-backend-prod . && \
+sudo docker stop polyfeed-backend-prod || true && \
+sudo docker rm polyfeed-backend-prod || true && \
+sudo docker run -d -p 8002:8002 --name polyfeed-backend-prod --network host polyfeed-backend-prod
 ```
 
 ### run container

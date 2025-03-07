@@ -153,9 +153,7 @@ def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: in
             assessment={
                 "id": assessment.id,
                 "name": assessment.assessmentName,
-                "description": assessment.description if hasattr(assessment, 'description') else None,
-                "unit_id": assessment.unit_id if hasattr(assessment, 'unit_id') else None,
-                # Add other assessment fields you want to include
+                "unitId": assessment.unitId,
             }
         )
         result.append(feedback_request)
