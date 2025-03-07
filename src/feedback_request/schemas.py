@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, field_validator
 import json
 
@@ -12,6 +12,7 @@ class FeedbackRequestPydantic(BaseModel):
     rubricItems: List[RubricItem]
     student_id: Optional[str] = None
     AI_RubricItem: Optional[str] = None
+    assessment: Optional[Dict[str, Any]] = None
 
     @field_validator('rubricItems', mode='before')
     @classmethod

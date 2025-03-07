@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from .models import FeedbackRequest
 from .schemas import FeedbackRequestPydantic
 from src.openai.service import explain_further
+from src.assessment.models import Assessment
 import json
 
 def get_existing_feedback_requests(db: Session, assignment_id: int):
@@ -134,36 +135,59 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
         return response
 
 def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: int = 100):
-    requests = db.query(FeedbackRequest)\
+    requests = db.query(FeedbackRequest, Assessment)\
+        .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
         .filter(FeedbackRequest.student_id == student_id)\
         .offset(skip)\
         .limit(limit)\
         .all()
     
-    return [FeedbackRequestPydantic(
-        id=req.id,
-        assignmentId=req.assignmentId,
-        rubricItems=req.get_rubric_items(),
-        AI_RubricItem=req.AI_RubricItem,
-        student_id=req.student_id
-    ) for req in requests]
+    result = []
+    for req, assessment in requests:
+        feedback_request = FeedbackRequestPydantic(
+            id=req.id,
+            assignmentId=req.assignmentId,
+            rubricItems=req.get_rubric_items(),
+            AI_RubricItem=req.AI_RubricItem,
+            student_id=req.student_id,
+            assessment={
+                "id": assessment.id,
+                "name": assessment.name,
+                "description": assessment.description if hasattr(assessment, 'description') else None,
+                "unit_id": assessment.unit_id if hasattr(assessment, 'unit_id') else None,
+                # Add other assessment fields you want to include
+            }
+        )
+        result.append(feedback_request)
+    
+    return result
 
 def get_feedback_request_by_assignment(db: Session, assignment_id: int, student_id: str):
     """Get a single feedback request for a specific assignment and student"""
-    request = db.query(FeedbackRequest)\
+    result = db.query(FeedbackRequest, Assessment)\
+        .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
         .filter(
             FeedbackRequest.assignmentId == assignment_id,
             FeedbackRequest.student_id == student_id
         )\
         .first()
     
-    if not request:
+    if not result:
         return None
+    
+    request, assessment = result
         
     return FeedbackRequestPydantic(
         id=request.id,
         assignmentId=request.assignmentId,
         rubricItems=request.get_rubric_items(),
         AI_RubricItem=request.AI_RubricItem,
-        student_id=request.student_id
+        student_id=request.student_id,
+        assessment={
+            "id": assessment.id,
+            "name": assessment.name,
+            "description": assessment.description if hasattr(assessment, 'description') else None,
+            "unit_id": assessment.unit_id if hasattr(assessment, 'unit_id') else None,
+            # Add other assessment fields you want to include
+        }
     ) 
