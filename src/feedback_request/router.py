@@ -57,4 +57,4 @@ def get_request_by_unitcode_assessment(
     current_user = Depends(get_current_user)
 ):
     """Get feedback request for a specific assignment"""
-    return get_feedback_request_by_unitcode_assessment(db, unit_code, assessment_name, current_user.email) 
+    return get_feedback_request_by_unitcode_assessment(db, unit_code, assessment_name) 

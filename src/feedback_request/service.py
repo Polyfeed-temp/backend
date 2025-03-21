@@ -190,13 +190,16 @@ def get_feedback_request_by_assignment(db: Session, assignment_id: int, student_
         }
     ) 
 
-def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, assessment_name: str, student_id: str):
+def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, assessment_name: str):
     """Get a single feedback request for a specific unit code and assessment name and student"""
+
+    print("unit_code", unit_code)
+    print("assessment_name", assessment_name)
     result = db.query(FeedbackRequest, Assessment)\
         .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
         .filter(
-            Assessment.unit_code == unit_code,
-            Assessment.assessmentName == assessment_name,
+            Assessment.unit_id == unit_code,
+            Assessment.assessment_name == assessment_name,
         )\
         .first()
     
@@ -210,13 +213,5 @@ def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, ass
         assignmentId=request.assignmentId,
         rubricItems=request.get_rubric_items(),
         AI_RubricItem=request.AI_RubricItem,
-        student_id=request.student_id,
-        assessment={
-            "id": assessment.id,
-            "name": assessment.assessmentName,
-            "description": assessment.description if hasattr(assessment, 'description') else None,
-            "unit_id": assessment.unit_id if hasattr(assessment, 'unit_id') else None,
-            # Add other assessment fields you want to include
-        }
     ) 
     
