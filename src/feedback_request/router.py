@@ -49,11 +49,11 @@ def get_request_by_assignment(
 
 
 
-@router.get("/{unit_code}/{assessment_name}", response_model=FeedbackRequestPydantic)
+@router.get("/{unit_code}/{assessment_name}", response_model=List[FeedbackRequestPydantic])
 def get_request_by_unitcode_assessment(
     unit_code: str,
     assessment_name: str,
     db: Session = Depends(get_db),
 ):
-    """Get feedback request for a specific assignment"""
+    """Get all feedback requests for a specific unit code and assessment name"""
     return get_feedback_request_by_unitcode_assessment(db, unit_code, assessment_name) 

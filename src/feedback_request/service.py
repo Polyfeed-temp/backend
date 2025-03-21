@@ -191,27 +191,35 @@ def get_feedback_request_by_assignment(db: Session, assignment_id: int, student_
     ) 
 
 def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, assessment_name: str):
-    """Get a single feedback request for a specific unit code and assessment name and student"""
+    """Get all feedback requests for a specific unit code and assessment name"""
 
     print("unit_code", unit_code)
     print("assessment_name", assessment_name)
-    result = db.query(FeedbackRequest, Assessment)\
+    results = db.query(FeedbackRequest, Assessment)\
         .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
         .filter(
             Assessment.unitId == unit_code,
             Assessment.assessmentName == assessment_name,
         )\
-        .first()
+        .all()
     
-    if not result:
-        return None
+    if not results:
+        return []
     
-    request, assessment = result
+    feedback_requests = []
+    for request, assessment in results:
+        feedback_requests.append(FeedbackRequestPydantic(
+            id=request.id,
+            assignmentId=request.assignmentId,
+            rubricItems=request.get_rubric_items(),
+            AI_RubricItem=request.AI_RubricItem,
+            student_id=request.student_id,
+            assessment={
+                "id": assessment.id,
+                "name": assessment.assessmentName,
+                "unitId": assessment.unitId,
+            }
+        ))
     
-    return FeedbackRequestPydantic(
-        id=request.id,
-        assignmentId=request.assignmentId,
-        rubricItems=request.get_rubric_items(),
-        AI_RubricItem=request.AI_RubricItem,
-    ) 
+    return feedback_requests
     
