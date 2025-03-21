@@ -40,6 +40,14 @@ def rate_feedback_route(feedbackId, rating:FeedbackRating,db: Session = Depends(
         raise HTTPException(status_code=404, detail="Feedback not found")
     return True
 
+
+@router.get("/feedback/{unit_code}/{assessment_name}")
+def get_feedbacks_by_assessment_id_route(unit_code: str, assessment_name: str, db: Session = Depends(get_db)):
+    feedback = get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db)
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return feedback
+
 @router.get("/feedbacks/{email}")
 def rate_feedback_route(email,db: Session = Depends(get_db)):
     feedback = get_feedbacks_by_user_email(email, db)
@@ -78,9 +86,3 @@ def get_feedbacks_by_assessment_id_route(assessment_id: int, db: Session = Depen
         raise HTTPException(status_code=404, detail="Feedback not found")
     return feedback
 
-@router.get("/feedback/{unit_code}/{assessment_name}")
-def get_feedbacks_by_assessment_id_route(unit_code: str, assessment_name: str, db: Session = Depends(get_db)):
-    feedback = get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db)
-    if not feedback:
-        raise HTTPException(status_code=404, detail="Feedback not found")
-    return feedback
