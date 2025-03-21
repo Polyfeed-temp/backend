@@ -198,8 +198,8 @@ def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, ass
     result = db.query(FeedbackRequest, Assessment)\
         .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
         .filter(
-            Assessment.unit_id == unit_code,
-            Assessment.assessment_name == assessment_name,
+            Assessment.unitId == unit_code,
+            Assessment.assessmentName == assessment_name,
         )\
         .first()
     
