@@ -385,3 +385,13 @@ def get_feedbacks_by_user_email(email, db: Session):
     feedbacks_list = list(feedbacks_dict.values())
     return feedbacks_list
 
+
+def get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db: Session):
+    results = db.query(Feedback, Assessment)\
+        .join(Assessment, Feedback.assessmentId == Assessment.id)\
+        .filter(
+            Assessment.unitId == unit_code,
+            Assessment.assessmentName == assessment_name,
+        )\
+        .all()
+    return results

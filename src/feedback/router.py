@@ -4,7 +4,7 @@ from pydantic import UUID4
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.login.service import get_current_user
-from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights, rate_feedback, delete_feedback, delete_all_highlights,patch_assessment_feedback, rate_gpt_response, get_feeedbacks_by_assessment_id, get_feedbacks_by_user_email
+from .service import create_feedback,get_feedback_highlights_by_url, get_all_user_feedback_highlights, rate_feedback, delete_feedback, delete_all_highlights,patch_assessment_feedback, rate_gpt_response, get_feeedbacks_by_assessment_id, get_feedbacks_by_user_email, get_feeedbacks_by_unitcode_assessment
 from .schemas import FeedbackBasePydantic,FeedbackRating
 
 
@@ -19,7 +19,7 @@ def create_feedback_route(feedback:FeedbackBasePydantic, db: Session = Depends(g
 # def get_highlight_from_feedback_route(feedbackId: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
 #     return get_highlights_from_feedback(feedbackId, db)
 
-@router.get("/highlights" )
+@router.get("/highlights")
 def get_feedback_highlights_by_url_route( url, db: Session = Depends(get_db), user = Depends(get_current_user)):
     feedback = get_feedback_highlights_by_url(user, url, db)
     if not feedback:
@@ -39,8 +39,6 @@ def rate_feedback_route(feedbackId, rating:FeedbackRating,db: Session = Depends(
     if not rate_feedback(feedbackId, rating, db, user):
         raise HTTPException(status_code=404, detail="Feedback not found")
     return True
-
-
 
 @router.get("/feedbacks/{email}")
 def rate_feedback_route(email,db: Session = Depends(get_db)):
@@ -76,6 +74,13 @@ def rate_gpt_response_route(feedbackId, rating:int, attemptTime:int,db: Session 
 @router.get("/assessment/{assessment_id}")
 def get_feedbacks_by_assessment_id_route(assessment_id: int, db: Session = Depends(get_db), user = Depends(get_current_user)):
     feedback = get_feeedbacks_by_assessment_id(assessment_id, db, user)
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    return feedback
+
+@router.get("/feedback/{unit_code}/{assessment_name}")
+def get_feedbacks_by_assessment_id_route(unit_code: str, assessment_name: str, db: Session = Depends(get_db)):
+    feedback = get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db)
     if not feedback:
         raise HTTPException(status_code=404, detail="Feedback not found")
     return feedback
