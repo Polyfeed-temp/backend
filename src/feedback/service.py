@@ -387,11 +387,78 @@ def get_feedbacks_by_user_email(email, db: Session):
 
 
 def get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db: Session):
-    results = db.query(Feedback, Assessment)\
-        .join(Assessment, Feedback.assessmentId == Assessment.id)\
+    query = (
+        db.query(Feedback, Assessment, Highlight, func.concat('[', func.group_concat(
+            func.json_object(
+                'id', AnnotationActionPoint.id,
+                'action', AnnotationActionPoint.action,
+                'category', AnnotationActionPoint.category,
+                'deadline', AnnotationActionPoint.deadline,
+                'status', AnnotationActionPoint.status
+            )
+        ), ']').label('actionItems'))
+        .join(Assessment, Feedback.assessmentId == Assessment.id)
+        .outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
+        .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
+                   (AnnotationActionPoint.rowStatus == "ACTIVE"))
         .filter(
             Assessment.unitId == unit_code,
             Assessment.assessmentName == assessment_name,
-        )\
-        .all()
-    return results
+            Feedback.rowStatus == "ACTIVE"
+        )
+        .group_by(Feedback.id, Highlight.id)
+    )
+
+    result = query.all()
+    feedbacks_dict = {}
+    
+    if len(result) == 0:
+        return None
+
+    for row in result:
+        feedback, assessment, highlight, actionItems = row
+        feedback_entry = feedbacks_dict.setdefault(feedback.id, {
+            "id": feedback.id,
+            "url": feedback.url,
+            "assessmentId": feedback.assessmentId,
+            "studentEmail": feedback.studentEmail,
+            "mark": feedback.mark,
+            "performance": feedback.performance,
+            "clarity": feedback.clarity,
+            "evaluativeJudgement": feedback.evaluativeJudgement,
+            "personalise": feedback.personalise,
+            "usability": feedback.usability,
+            "emotion": feedback.emotion,
+            "furtherQuestions": feedback.furtherQuestions,
+            "comment": feedback.comment,
+            "highlights": []
+        })
+
+        if highlight:
+            start_meta = highlight.startMeta
+            end_meta = highlight.endMeta
+
+            parsed_start_meta = json.loads(start_meta) if start_meta is not None else DomMeta(parentTagName="div",
+                                                                                              parentIndex=0,
+                                                                                              textOffset=0)
+            parsed_end_meta = json.loads(end_meta) if end_meta is not None else DomMeta(parentTagName="div",
+                                                                                        parentIndex=0, textOffset=0)
+            highlight_data = HighlightPydantic(
+                id=highlight.id,
+                startMeta=parsed_start_meta,
+                endMeta=parsed_end_meta,
+                text=highlight.text,
+                annotationTag=highlight.annotationTag,
+                notes=highlight.notes,
+                feedbackId=highlight.feedbackId,
+                commonTheme=highlight.commonTheme
+            )
+            filtered_action_items = json.loads(actionItems)
+            complete_highlight = {
+                'annotation': highlight_data,
+                'actionItems': [value for value in filtered_action_items if value["action"] != None]
+            }
+            feedback_entry['highlights'].append(complete_highlight)
+
+    feedbacks_list = list(feedbacks_dict.values())
+    return feedbacks_list
