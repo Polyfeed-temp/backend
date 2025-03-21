@@ -46,3 +46,15 @@ def get_request_by_assignment(
     """Get feedback request for a specific assignment"""
     return get_feedback_request_by_assignment(db, assignment_id, current_user.email) 
 
+
+
+
+@router.get("/{unit_code}/{assessment_name}", response_model=FeedbackRequestPydantic)
+def get_request_by_unitcode_assessment(
+    unit_code: str,
+    assessment_name: str,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """Get feedback request for a specific assignment"""
+    return get_feedback_request_by_unitcode_assessment(db, unit_code, assessment_name, current_user.email) 
