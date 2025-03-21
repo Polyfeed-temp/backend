@@ -10,6 +10,7 @@ from src.action.models import AnnotationActionPoint
 from src.highlight.schemas import DomMeta
 import json
 from src.database import unit as unit_temp
+from src.assessment.models import Assessment
 
 
 def get_feedback_by_assessment_id(assessment_id: int, db: Session):
