@@ -388,6 +388,10 @@ def get_feedbacks_by_user_email(email, db: Session):
 
 
 def get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db: Session):
+    # Trim whitespace from input parameters
+    unit_code = unit_code.strip() if unit_code else unit_code
+    assessment_name = assessment_name.strip() if assessment_name else assessment_name
+
     query = (
         db.query(Feedback, Assessment, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -403,8 +407,8 @@ def get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db: Sessio
         .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
                    (AnnotationActionPoint.rowStatus == "ACTIVE"))
         .filter(
-            Assessment.unitId == unit_code,
-            Assessment.assessmentName == assessment_name,
+            func.trim(Assessment.unitId) == unit_code,
+            func.trim(Assessment.assessmentName) == assessment_name,
             Feedback.rowStatus == "ACTIVE"
         )
         .group_by(Feedback.id, Highlight.id)
