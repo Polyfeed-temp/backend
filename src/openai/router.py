@@ -14,13 +14,12 @@ router = APIRouter()
 @router.post("/explain/{feedback_id}", response_model=ResponseExplain)
 def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: Session = Depends(get_db), user=Depends(get_current_user)):
 
-    prompt_one = "Students receive feedback on their assessments and can manage this feedback using our tool that allows them to annotate,"\
-                "take notes, create action plans, and monitor their progress. However, some sentences in the feedback may be unclear or too complex, making it difficult for students to understand."\
-                "\nThe whole feedback that they receive is: feedback_text_prompt \nCan you please explain/clarify the feedback in a simpler and more"\
-                "comprehensive way for the students to easily understand? Please remember, I only need your help in explaining the feedback in bullet points."\
+    prompt_one = "Students receive feedback on their assessments and can manage this feedback using our tool that allows them to annotate, take notes, create action plans, and monitor their progress. However, some sentences in the feedback may be unclear or too complex, making it difficult for students to understand. "\
+                "\nThe whole feedback that they receive is: feedback_text_prompt "\
+                "\nYour task is to explain/clarify the feedback in a simpler way for the students to easily understand. When you explain the feedback make sure to use plain language and simple sentences, provide examples whenever possible and use bullet points to highlight key points."
 
-    prompt_two = "The explanation received is still not clear. Can you please go through the original"\
-                "feedback text again and provide an explanation / clarification in bullet points. Original Feedback: feedback_text_prompt"
+    prompt_two = "The explanation received earlier not clear. Can you please go through the original feedback text again and provide an explanation / clarification in bullet points using plain language and simple sentences. This time, please make sure to include some actionable information, such as steps to take to improve learning."\
+                "\n\nOriginal Feedback: feedback_text_prompt"
 
 
     query = prompt_one.replace("feedback_text_prompt", content.content)
@@ -89,10 +88,8 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
         print(f"Highlight id: {highlight.id} highlight: {highlight.text}\n")
         data_input += f"Highlight id: {highlight.id} highlight: {highlight.text}\n"
 
-    prompt =    f"Data: {data_input} \nTask: Include the strengths that do not have a common theme into the matching"\
-                "categories of the following list of common themes. If there is no category to include, add a new one."\
-                "Under each common theme specify the row number and the description. and the common theme cannot be more than 3 words. Give me the final output in JSON array format:"\
-                "[{highlightId : {id}, commonTheme: {commonTheme}}]\nList: {list_input}"    
+    prompt =    f"Data: {data_input} \nTask: Include the strengths into the matching categories of the following list of common themes. If there is no category to include, add a new one. Under each common theme specify the row number and the description."\
+                "\nPlease provide the output in JSON array format: [{highlightId: {id}, commonTheme: {commonTheme}}]"
     try:
         # Simulate external service call
         response = service.explain_further(prompt)
