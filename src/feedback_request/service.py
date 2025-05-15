@@ -29,11 +29,11 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "dataset_format": ["Rubric Item", "Feedback Request"]
           },
           "instructions": [
-            "For each entry in the dataset, generate a concise and meaningful AI_Rubric_Item based on the 'Rubric Item' and 'Feedback Request'.",
-            "Add a new column named 'AI_Rubric_Item' to the dataset.",
-            "Each AI_Rubric_Item must not exceed 8 words.",
-            "If the input is vague, general, or partially missing, still try to infer a useful AI_Rubric_Item if possible.",
-            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), leave the 'AI_Rubric_Item' blank or mark as 'Unmappable'."
+            "For each entry in the dataset, generate a concise and meaningful AI_RubricItem based on the 'Rubric Item' and 'Feedback Request'.",
+            "Add a new column named 'AI_RubricItem' to the dataset.",
+            "Each AI_RubricItem must not exceed 8 words in the 'item' field.",
+            "If the input is vague, general, or partially missing, still try to infer a useful AI_RubricItem if possible.",
+            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), leave the 'AI_RubricItem' blank or mark as 'Unmappable'."
           ],
           "examples_of_nonsensical_input": [
             "Random strings (e.g., 'asdf', 'kkkk')",
@@ -42,10 +42,15 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "Empty or whitespace-only fields",
             "Words or phrases with no educational context (e.g., 'banana', 'lol')"
           ],
-          "output_format": [
-            "Rubric Item",
-            "Feedback Request",
-            "AI_Rubric_Item"
+          "exact_output_format": [
+            {
+              "item": "Original Rubric Item",
+              "comments": "Original Feedback Request",
+              "AI_RubricItem": {
+                "item": "Short concise rubric title (max 8 words)",
+                "comments": "Clarified version of the request"
+              }
+            }
           ],
           "dataset": rubric_items_dict
         }
@@ -53,7 +58,21 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
         prompt = f"""
         {json.dumps(first_time_prompt, indent=2)}
         
-        Please return your response in JSON format enclosed in ```json blocks.
+        IMPORTANT: Your response MUST be in the following JSON format enclosed in ```json blocks:
+        
+        ```json
+        [
+            {{
+                "item": "Original item from input",
+                "comments": "Original comments from input",
+                "AI_RubricItem": {{
+                    "item": "Concise rubric title (max 8 words)",
+                    "comments": "Clarified version of the request"
+                }}
+            }},
+            ...more items...
+        ]
+        ```
         """
     else:
         # Create Dataset B from existing requests
@@ -73,11 +92,11 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "dataset_format": ["Rubric Item", "Feedback Request"]
           },
           "instructions": [
-            "For each entry in Dataset A, generate a concise and meaningful AI_Rubric_Item based on the 'Rubric Item' and 'Feedback Request'.",
-            "When possible, map new entries to existing AI_Rubric Items from Dataset B for consistency.",
-            "If a suitable match cannot be found in Dataset B, create a new AI_Rubric_Item.",
-            "Each AI_Rubric_Item must not exceed 8 words.",
-            "If the input is vague, general, or partially missing, still try to infer a useful AI_Rubric_Item if possible.",
+            "For each entry in Dataset A, generate a concise and meaningful AI_RubricItem based on the 'Rubric Item' and 'Feedback Request'.",
+            "When possible, map new entries to existing AI_RubricItems from Dataset B for consistency.",
+            "If a suitable match cannot be found in Dataset B, create a new AI_RubricItem.",
+            "Each AI_RubricItem must not exceed 8 words in the 'item' field.",
+            "If the input is vague, general, or partially missing, still try to infer a useful AI_RubricItem if possible.",
             "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), mark as 'Unmappable'."
           ],
           "examples_of_nonsensical_input": [
@@ -87,10 +106,15 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "Empty or whitespace-only fields",
             "Words or phrases with no educational context (e.g., 'banana', 'lol')"
           ],
-          "output_format": [
-            "Rubric Item",
-            "Feedback Request",
-            "AI_Rubric_Item"
+          "exact_output_format": [
+            {
+              "item": "Original Rubric Item",
+              "comments": "Original Feedback Request",
+              "AI_RubricItem": {
+                "item": "Short concise rubric title (max 8 words)",
+                "comments": "Clarified version of the request"
+              }
+            }
           ],
           "dataset_a": rubric_items_dict,
           "dataset_b": existing_data
@@ -99,7 +123,21 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
         prompt = f"""
         {json.dumps(subsequent_prompt, indent=2)}
         
-        Please return your response in JSON format enclosed in ```json blocks.
+        IMPORTANT: Your response MUST be in the following JSON format enclosed in ```json blocks:
+        
+        ```json
+        [
+            {{
+                "item": "Original item from input",
+                "comments": "Original comments from input",
+                "AI_RubricItem": {{
+                    "item": "Concise rubric title (max 8 words)",
+                    "comments": "Clarified version of the request"
+                }}
+            }},
+            ...more items...
+        ]
+        ```
         """
 
     ai_response = explain_further(prompt)
