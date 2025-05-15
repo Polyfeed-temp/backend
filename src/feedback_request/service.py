@@ -20,35 +20,86 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
     
     if not existing_requests:
         # First time prompt
-        prompt = f"""
-        You are given a dataset with student feedback requests for <unit code> <unit name>, which specifies the rubric items and their specific feedback requests. 
-        In some cases, the rubric item is not clear, or the feedback request is very general. 
-        Your task is to generate a concise and clear rubric item and return the dataset with the additional column in a json format as []. 
-        Please return your response in JSON format enclosed in ```json blocks.
+        first_time_prompt = {
+          "task": "Generate AI_Rubric Items for student feedback requests",
+          "context": {
+            "unit": "<unit code> <unit name>",
+            "description": "This is the first time the student is requesting feedback for this assignment.",
+            "assignment_id": assignment_id,
+            "dataset_format": ["Rubric Item", "Feedback Request"]
+          },
+          "instructions": [
+            "For each entry in the dataset, generate a concise and meaningful AI_Rubric_Item based on the 'Rubric Item' and 'Feedback Request'.",
+            "Add a new column named 'AI_Rubric_Item' to the dataset.",
+            "Each AI_Rubric_Item must not exceed 8 words.",
+            "If the input is vague, general, or partially missing, still try to infer a useful AI_Rubric_Item if possible.",
+            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), leave the 'AI_Rubric_Item' blank or mark as 'Unmappable'."
+          ],
+          "examples_of_nonsensical_input": [
+            "Random strings (e.g., 'asdf', 'kkkk')",
+            "Isolated numbers (e.g., '1234', '2323')",
+            "Keyboard mashing (e.g., 'qwertyui')",
+            "Empty or whitespace-only fields",
+            "Words or phrases with no educational context (e.g., 'banana', 'lol')"
+          ],
+          "output_format": [
+            "Rubric Item",
+            "Feedback Request",
+            "AI_Rubric_Item"
+          ],
+          "dataset": rubric_items_dict
+        }
         
-        Data Set: {json.dumps(rubric_items_dict)}
+        prompt = f"""
+        {json.dumps(first_time_prompt, indent=2)}
+        
+        Please return your response in JSON format enclosed in ```json blocks.
         """
     else:
         # Create Dataset B from existing requests
         existing_data = []
         for req in existing_requests:
             existing_data.append({
-                "rubricItems": json.loads(req.rubricItems) if isinstance(req.rubricItems, str) else req.rubricItems,
                 "AI_RubricItem": req.AI_RubricItem
             })
 
         # Subsequent times prompt
+        subsequent_prompt = {
+          "task": "Generate AI_Rubric Items for student feedback requests",
+          "context": {
+            "unit": "<unit code> <unit name>",
+            "description": "The student is requesting feedback for an assignment with existing feedback requests.",
+            "assignment_id": assignment_id,
+            "dataset_format": ["Rubric Item", "Feedback Request"]
+          },
+          "instructions": [
+            "For each entry in Dataset A, generate a concise and meaningful AI_Rubric_Item based on the 'Rubric Item' and 'Feedback Request'.",
+            "When possible, map new entries to existing AI_Rubric Items from Dataset B for consistency.",
+            "If a suitable match cannot be found in Dataset B, create a new AI_Rubric_Item.",
+            "Each AI_Rubric_Item must not exceed 8 words.",
+            "If the input is vague, general, or partially missing, still try to infer a useful AI_Rubric_Item if possible.",
+            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), mark as 'Unmappable'."
+          ],
+          "examples_of_nonsensical_input": [
+            "Random strings (e.g., 'asdf', 'kkkk')",
+            "Isolated numbers (e.g., '1234', '2323')",
+            "Keyboard mashing (e.g., 'qwertyui')",
+            "Empty or whitespace-only fields",
+            "Words or phrases with no educational context (e.g., 'banana', 'lol')"
+          ],
+          "output_format": [
+            "Rubric Item",
+            "Feedback Request",
+            "AI_Rubric_Item"
+          ],
+          "dataset_a": rubric_items_dict,
+          "dataset_b": existing_data
+        }
+        
         prompt = f"""
-        You are given dataset A, which a student of <> unit has requested feedback for assignment {assignment_id}. 
-        It has a Rubric Item, FeedbackRequest. In some cases, the rubric item is not mentioned, or the feedback request is not clear. 
-        You are also given the dataset B of existing Rubric Items, Feedback Requests and AI generated rubric items.
-        Your task is to generate an additional column to the Dataset A. 
-        You should attempt to map the new values to the existing AI_Rubric Items in Dataset B.
-        If they don't map to the existing values or the existing values are empty you may create a new AI_Rubric Item.
+        {json.dumps(subsequent_prompt, indent=2)}
+        
         Please return your response in JSON format enclosed in ```json blocks.
-
-        Data Set A: {json.dumps(rubric_items_dict)}
-        Data Set B: {json.dumps(existing_data)}
         """
 
     ai_response = explain_further(prompt)
