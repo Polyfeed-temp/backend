@@ -79,7 +79,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
     else:
         # Create Dataset B from existing requests (limited to 100 items)
         existing_data = []
-        for req in existing_requests[:100]:
+        for req in existing_requests[:50]:
             existing_data.append({
                 "AI_RubricItem": req.AI_RubricItem
             })
