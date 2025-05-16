@@ -13,7 +13,7 @@ def get_existing_feedback_requests(db: Session, assignment_id: int):
 
 def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
     # Convert RubricItems to dict for JSON serialization and limit to 100 items
-    rubric_items_dict = [item.model_dump() for item in rubric_items][:50]
+    rubric_items_dict = [item.model_dump() for item in rubric_items][:10]
     
     # Check if this is the first time for this assignment
     existing_requests = get_existing_feedback_requests(db, assignment_id)
@@ -79,7 +79,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
     else:
         # Create Dataset B from existing requests (limited to 100 items)
         existing_data = []
-        for req in existing_requests[:50]:
+        for req in existing_requests[:10]:
             existing_data.append({
                 "AI_RubricItem": req.AI_RubricItem
             })
