@@ -12,8 +12,8 @@ def get_existing_feedback_requests(db: Session, assignment_id: int):
         .all()
 
 def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
-    # Convert RubricItems to dict for JSON serialization
-    rubric_items_dict = [item.model_dump() for item in rubric_items]
+    # Convert RubricItems to dict for JSON serialization and limit to 100 items
+    rubric_items_dict = [item.model_dump() for item in rubric_items][:100]
     
     # Check if this is the first time for this assignment
     existing_requests = get_existing_feedback_requests(db, assignment_id)
@@ -33,7 +33,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "Add a new column named 'AI_RubricItem' to the dataset.",
             "Each AI_RubricItem must not exceed 8 words in the 'item' field.",
             "If the input is vague, general, or partially missing, still try to infer a useful AI_RubricItem if possible.",
-            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), leave the 'AI_RubricItem' blank or mark as 'Unmappable'."
+            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), set item to 'Unmappable' and leave comments field empty."
           ],
           "examples_of_nonsensical_input": [
             "Random strings (e.g., 'asdf', 'kkkk')",
@@ -48,7 +48,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
               "comments": "Original Feedback Request",
               "AI_RubricItem": {
                 "item": "Short concise rubric title (max 8 words)",
-                "comments": "Clarified version of the request"
+                "comments": "Clarified version of the request or empty string if Unmappable"
               }
             }
           ],
@@ -73,11 +73,13 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             ...more items...
         ]
         ```
+        
+        When item is "Unmappable", the comments field MUST be an empty string ("").
         """
     else:
-        # Create Dataset B from existing requests
+        # Create Dataset B from existing requests (limited to 100 items)
         existing_data = []
-        for req in existing_requests:
+        for req in existing_requests[:100]:
             existing_data.append({
                 "AI_RubricItem": req.AI_RubricItem
             })
@@ -97,7 +99,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             "If a suitable match cannot be found in Dataset B, create a new AI_RubricItem.",
             "Each AI_RubricItem must not exceed 8 words in the 'item' field.",
             "If the input is vague, general, or partially missing, still try to infer a useful AI_RubricItem if possible.",
-            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), mark as 'Unmappable'."
+            "If the input is nonsensical or meaningless (e.g., random characters or numbers like 'asdf', '1234', 'kkkk'), set item to 'Unmappable' and leave comments field empty."
           ],
           "examples_of_nonsensical_input": [
             "Random strings (e.g., 'asdf', 'kkkk')",
@@ -112,7 +114,7 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
               "comments": "Original Feedback Request",
               "AI_RubricItem": {
                 "item": "Short concise rubric title (max 8 words)",
-                "comments": "Clarified version of the request"
+                "comments": "Clarified version of the request or empty string if Unmappable"
               }
             }
           ],
@@ -138,6 +140,8 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
             ...more items...
         ]
         ```
+        
+        When item is "Unmappable", the comments field MUST be an empty string ("").
         """
 
     ai_response = explain_further(prompt)
