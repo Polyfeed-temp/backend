@@ -11,6 +11,79 @@ from src.highlight.schemas import DomMeta
 import json
 from src.database import unit as unit_temp
 from src.assessment.models import Assessment
+from src.user.encryption import encrypt_field, decrypt_field
+
+
+def _encrypt_feedback_emails(feedback_data: dict) -> dict:
+    """Encrypt email fields in feedback data before storage."""
+    encrypted_data = feedback_data.copy()
+    
+    # Encrypt email fields
+    if 'studentEmail' in encrypted_data and encrypted_data['studentEmail']:
+        encrypted_data['studentEmail'] = encrypt_field(encrypted_data['studentEmail'])
+    
+    if 'markerEmail' in encrypted_data and encrypted_data['markerEmail']:
+        encrypted_data['markerEmail'] = encrypt_field(encrypted_data['markerEmail'])
+    
+    return encrypted_data
+
+
+def _decrypt_feedback_emails(feedback_obj) -> dict:
+    """Decrypt email fields when retrieving feedback from database."""
+    if hasattr(feedback_obj, '__dict__'):
+        # Convert SQLAlchemy object to dict
+        data_dict = {column.name: getattr(feedback_obj, column.name) for column in feedback_obj.__table__.columns}
+    elif hasattr(feedback_obj, '_asdict'):
+        # SQLAlchemy Row object
+        data_dict = feedback_obj._asdict()
+    elif hasattr(feedback_obj, 'keys'):
+        # Dict-like object
+        data_dict = dict(feedback_obj)
+    else:
+        # Convert to dict manually
+        data_dict = {}
+        for key in dir(feedback_obj):
+            if not key.startswith('_'):
+                try:
+                    data_dict[key] = getattr(feedback_obj, key)
+                except:
+                    pass
+    
+    # Decrypt email fields
+    if 'studentEmail' in data_dict and data_dict['studentEmail']:
+        try:
+            data_dict['studentEmail'] = decrypt_field(data_dict['studentEmail'])
+        except:
+            pass  # If decryption fails, keep original value
+    
+    if 'markerEmail' in data_dict and data_dict['markerEmail']:
+        try:
+            data_dict['markerEmail'] = decrypt_field(data_dict['markerEmail'])
+        except:
+            pass  # If decryption fails, keep original value
+    
+    return data_dict
+
+
+def _find_feedback_by_encrypted_email(db: Session, email: str, url: str = None) -> Feedback:
+    """Find feedback by searching through encrypted emails."""
+    query = db.query(Feedback)
+    if url:
+        query = query.filter(Feedback.url == url)
+    
+    feedbacks = query.all()
+    
+    for feedback in feedbacks:
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            if decrypted_email == email:
+                return feedback
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if feedback.studentEmail == email:
+                return feedback
+    
+    return None
 
 
 def get_feedback_by_assessment_id(assessment_id: int, db: Session):
@@ -27,19 +100,25 @@ def create_feedback(feedback:FeedbackBasePydantic, db: Session):
         feedback_dict['feedbackUseful'] = feedback_dict.get('feedbackUseful') or ''
         feedback_dict['url'] = str(feedback.url)
         
-        feedback_model = Feedback(**feedback_dict)
+        # Encrypt email fields before storage
+        encrypted_feedback_dict = _encrypt_feedback_emails(feedback_dict)
+        
+        feedback_model = Feedback(**encrypted_feedback_dict)
         db.add(feedback_model)
         db.commit()
         db.refresh(feedback_model)
-        return feedback_model
+        
+        # Return decrypted data for response
+        return _decrypt_feedback_emails(feedback_model)
     except SQLAlchemyError as e:
         print("error in creating feedback" , e)
         db.rollback()  # Add rollback here
-        update_feedback = db.query(Feedback).filter(
-            Feedback.url == feedback.url, 
-            Feedback.studentEmail == feedback.studentEmail
-        ).first()
-        return update_feedback
+        
+        # Find existing feedback using encrypted email search
+        update_feedback = _find_feedback_by_encrypted_email(db, feedback.studentEmail, str(feedback.url))
+        if update_feedback:
+            return _decrypt_feedback_emails(update_feedback)
+        return None
 
 def get_highlights_from_feedback(feedback_id: int, db: Session):
     highlights = db.query(Highlight).filter(Highlight.feedbackId == feedback_id, Highlight.rowStatus == "ACTIVE").all()
@@ -49,6 +128,12 @@ def get_highlights_from_feedback(feedback_id: int, db: Session):
 def get_feedback_highlights_by_url(user, url, db: Session):
     main_url = url.split('#')[0]
     cached_units_data = get_all_units_with_assessments(db)
+    
+    # Find feedback using encrypted email search
+    user_feedback = _find_feedback_by_encrypted_email(db, user['email'], main_url)
+    if not user_feedback:
+        return None
+    
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -62,7 +147,7 @@ def get_feedback_highlights_by_url(user, url, db: Session):
                                                 (Highlight.rowStatus == "ACTIVE"))
         .outerjoin(AnnotationActionPoint,( Highlight.id == AnnotationActionPoint.highlightId) 
                    & (AnnotationActionPoint.rowStatus == "ACTIVE"))
-        .filter(Feedback.url == main_url).filter(Feedback.studentEmail == user.email, 
+        .filter(Feedback.url == main_url).filter(Feedback.id == user_feedback.id, 
                                                  Feedback.rowStatus == "ACTIVE")
         .group_by(Feedback.id, Highlight.id))
 
@@ -85,6 +170,10 @@ def get_feedback_highlights_by_url(user, url, db: Session):
         if actionItems:
             complete_highlight= {'annotation' : temp, 'actionItems':    [value for value in json.loads(actionItems) if value["action"] != None ]}
         feedbackHighlights.append(complete_highlight)
+    
+    # Decrypt feedback data for response
+    decrypted_feedback = _decrypt_feedback_emails(feedback)
+    
     unit_code = None
     assessment_name = None
     if cached_units_data:
@@ -98,18 +187,32 @@ def get_feedback_highlights_by_url(user, url, db: Session):
 
                         break
 
-
-    return {"id":feedback.id,"url":feedback.url, "assessmentId": feedback.assessmentId, "studentEmail":feedback.studentEmail, "performance": feedback.performance, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
-                "mark": feedback.mark,"unitCode":unit_code, "assessmentName":assessment_name, 
-                    "gptResponseRating":feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,"gptResponse":feedback.gptResponse, 
-                    "gptResponseRating_2":feedback.gptResponseRating_2, "gptQueryText_2": feedback.gptQueryText_2,"gptResponse_2":feedback.gptResponse_2, 
-                    "highlights":feedbackHighlights, "furtherQuestions":feedback.furtherQuestions, "comment":feedback.comment }
+    return {"id":decrypted_feedback["id"],"url":decrypted_feedback["url"], "assessmentId": decrypted_feedback["assessmentId"], "studentEmail":decrypted_feedback["studentEmail"], "performance": decrypted_feedback.get("performance"), "clarity": decrypted_feedback.get("clarity"), "evaluativeJudgement": decrypted_feedback.get("evaluativeJudgement"), "personalise": decrypted_feedback.get("personalise"), "usability": decrypted_feedback.get("usability"), "emotion": decrypted_feedback.get("emotion"),
+                "mark": decrypted_feedback["mark"],"unitCode":unit_code, "assessmentName":assessment_name, 
+                    "gptResponseRating":decrypted_feedback.get("gptResponseRating"), "gptQueryText": decrypted_feedback.get("gptQueryText"),"gptResponse":decrypted_feedback.get("gptResponse"), 
+                    "gptResponseRating_2":decrypted_feedback.get("gptResponseRating_2"), "gptQueryText_2": decrypted_feedback.get("gptQueryText_2"),"gptResponse_2":decrypted_feedback.get("gptResponse_2"), 
+                    "highlights":feedbackHighlights, "furtherQuestions":decrypted_feedback.get("furtherQuestions"), "comment":decrypted_feedback.get("comment") }
 
 def get_all_user_feedback_highlights(user, db: Session):
-    # cached_units_data = unit_temp.get_data()
-    # if not cached_units_data:
-    #     cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
     cached_units_data = get_all_units_with_assessments(db)
+    
+    # Get all feedbacks for user using encrypted email search
+    all_feedbacks = db.query(Feedback).filter(Feedback.rowStatus == "ACTIVE").all()
+    user_feedbacks = []
+    
+    for feedback in all_feedbacks:
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            if decrypted_email == user['email']:
+                user_feedbacks.append(feedback.id)
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if feedback.studentEmail == user['email']:
+                user_feedbacks.append(feedback.id)
+    
+    if not user_feedbacks:
+        return None
+    
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -122,7 +225,7 @@ def get_all_user_feedback_highlights(user, db: Session):
         ), ']').label('actionItems')).outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
             .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) &
                        ((AnnotationActionPoint.rowStatus == "ACTIVE")))
-            .filter(Feedback.studentEmail == user.email, Feedback.rowStatus == "ACTIVE")
+            .filter(Feedback.id.in_(user_feedbacks), Feedback.rowStatus == "ACTIVE")
             .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
@@ -132,9 +235,13 @@ def get_all_user_feedback_highlights(user, db: Session):
     
     for row in result:
         feedback, highlight, actionItems = row
+        
+        # Decrypt feedback data
+        decrypted_feedback = _decrypt_feedback_emails(feedback)
+        
         feedback_entry = feedbacks_dict.setdefault(feedback.id, {
-            "id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
-            "studentEmail": feedback.studentEmail, "mark": feedback.mark, "highlights": []
+            "id": decrypted_feedback["id"], "url": decrypted_feedback["url"], "assessmentId": decrypted_feedback["assessmentId"],
+            "studentEmail": decrypted_feedback["studentEmail"], "mark": decrypted_feedback["mark"], "highlights": []
         })
 
         if cached_units_data:
@@ -176,10 +283,18 @@ def get_all_user_feedback_highlights(user, db: Session):
     return feedbacks_list
 
 def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
+    feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
 
-        feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
-
-        if feedback and feedback.studentEmail == user.email:
+    if feedback:
+        # Check if user owns this feedback by decrypting email
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            user_owns_feedback = (decrypted_email == user['email'])
+        except:
+            # If decryption fails, check if it's already unencrypted
+            user_owns_feedback = (feedback.studentEmail == user['email'])
+        
+        if user_owns_feedback:
             feedback.performance = rating.performance
             feedback.clarity = rating.clarity
             feedback.evaluativeJudgement = rating.evaluativeJudgement
@@ -190,46 +305,68 @@ def rate_feedback(feedbackId:int, rating:FeedbackRating,db: Session, user):
             feedback.comment = rating.comment
             db.commit()
             return True
-        else:
-            return False
+    
+    return False
         
 def rate_gpt_response(feedbackId:int, rating:int,db: Session, user,attemptTime):
+    feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
 
-        feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
-
-        if feedback and feedback.studentEmail == user.email:
+    if feedback:
+        # Check if user owns this feedback by decrypting email
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            user_owns_feedback = (decrypted_email == user['email'])
+        except:
+            # If decryption fails, check if it's already unencrypted
+            user_owns_feedback = (feedback.studentEmail == user['email'])
+        
+        if user_owns_feedback:
             if attemptTime ==1 :
                 feedback.gptResponseRating = rating
             else:
                 feedback.gptResponseRating_2 = rating
             db.commit()
             return True
-        else:
-            return False
+    
+    return False
 
 def delete_feedback(feedbackId, db: Session, user):
     feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
-    if feedback and feedback.studentEmail == user.email:
-
-        feedback.rowStatus = "INACTIVE"
-        # db.delete(feedback)
-        db.commit()
-        return True
-    else:
-        return False
+    if feedback:
+        # Check if user owns this feedback by decrypting email
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            user_owns_feedback = (decrypted_email == user['email'])
+        except:
+            # If decryption fails, check if it's already unencrypted
+            user_owns_feedback = (feedback.studentEmail == user['email'])
+        
+        if user_owns_feedback:
+            feedback.rowStatus = "INACTIVE"
+            db.commit()
+            return True
+    
+    return False
 
 def delete_all_highlights(feedbackId, db: Session, user):
     try:
         feedback = db.query(Feedback).filter(Feedback.id == feedbackId).first()
-        if feedback and feedback.studentEmail == user.email:
-            highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId, Highlight.rowStatus == "ACTIVE").all()
-            for highlight in highlights:
-                # db.delete(highlight)
-                highlight.rowStatus = "INACTIVE"
-                db.commit()
-            return True
-        else:
-            return False
+        if feedback:
+            # Check if user owns this feedback by decrypting email
+            try:
+                decrypted_email = decrypt_field(feedback.studentEmail)
+                user_owns_feedback = (decrypted_email == user['email'])
+            except:
+                # If decryption fails, check if it's already unencrypted
+                user_owns_feedback = (feedback.studentEmail == user['email'])
+            
+            if user_owns_feedback:
+                highlights = db.query(Highlight).filter(Highlight.feedbackId == feedbackId, Highlight.rowStatus == "ACTIVE").all()
+                for highlight in highlights:
+                    highlight.rowStatus = "INACTIVE"
+                    db.commit()
+                return True
+        return False
     except SQLAlchemyError as e:
         db.rollback()  # Rollback in case of any error
         print(f"An error occurred: {e}")
@@ -237,12 +374,21 @@ def delete_all_highlights(feedbackId, db: Session, user):
 
 def patch_assessment_feedback(feedback_id, assessment_id, db: Session, user):
     feedback = db.query(Feedback).filter(Feedback.id == feedback_id).first()
-    if feedback and feedback.studentEmail == user.email:
-        feedback.assessmentId = assessment_id
-        db.commit()
-        return True
-    else:
-        return False
+    if feedback:
+        # Check if user owns this feedback by decrypting email
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            user_owns_feedback = (decrypted_email == user['email'])
+        except:
+            # If decryption fails, check if it's already unencrypted
+            user_owns_feedback = (feedback.studentEmail == user['email'])
+        
+        if user_owns_feedback:
+            feedback.assessmentId = assessment_id
+            db.commit()
+            return True
+    
+    return False
 
 def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
     cached_units_data = unit_temp.get_data()
@@ -261,16 +407,58 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
             .outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
             .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
                        (AnnotationActionPoint.rowStatus == "ACTIVE"))
-            .filter(Feedback.studentEmail == user.email, Feedback.assessmentId == assessment_id, 
-                    Feedback.rowStatus == "ACTIVE")
+            .filter(Feedback.assessmentId == assessment_id, Feedback.rowStatus == "ACTIVE")
             .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
     feedbackHighlights = []
     feedback = None
-    if len(result) == 0:
-        return None
+    
+    # Filter results by decrypted email to find user's feedback
+    user_feedback_found = False
     for row in result:
+        temp_feedback, highlight, actionItems = row
+        
+        # Check if this feedback belongs to the user
+        try:
+            decrypted_email = decrypt_field(temp_feedback.studentEmail)
+            if decrypted_email == user['email']:
+                feedback = temp_feedback
+                user_feedback_found = True
+                break
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if temp_feedback.studentEmail == user['email']:
+                feedback = temp_feedback
+                user_feedback_found = True
+                break
+    
+    if not user_feedback_found:
+        return None
+    
+    # Now get all highlights for this specific feedback
+    highlight_query = (
+        db.query(Feedback, Highlight, func.concat('[', func.group_concat(
+            func.json_object(
+                'id', AnnotationActionPoint.id,
+                'action', AnnotationActionPoint.action,
+                'category', AnnotationActionPoint.category,
+                'deadline', AnnotationActionPoint.deadline,
+                'status', AnnotationActionPoint.status
+            )
+        ), ']').label('actionItems'))
+            .outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
+            .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) & 
+                       (AnnotationActionPoint.rowStatus == "ACTIVE"))
+            .filter(Feedback.id == feedback.id, Feedback.rowStatus == "ACTIVE")
+            .group_by(Feedback.id, Highlight.id))
+    
+    highlight_results = highlight_query.all()
+    
+    if len(highlight_results) == 0:
+        return None
+        
+    for row in highlight_results:
         feedback, highlight, actionItems = row
 
         if not highlight:
@@ -302,21 +490,39 @@ def get_feeedbacks_by_assessment_id(assessment_id, db: Session, user):
                         assessment_name = assessment['assessmentName']
                         break
 
-    return {"id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
-            "studentEmail": feedback.studentEmail, "performance": feedback.performance, "clarity": feedback.clarity,
-            "evaluativeJudgement": feedback.evaluativeJudgement, "personalise": feedback.personalise,
-            "usability": feedback.usability, "emotion": feedback.emotion,
-            "mark": feedback.mark, "unitCode": unit_code, "assess mentName": assessment_name,
-            "gptResponseRating": feedback.gptResponseRating, "gptQueryText": feedback.gptQueryText,
-            "gptResponse": feedback.gptResponse, "highlights": feedbackHighlights, }
+    # Decrypt feedback data for response
+    decrypted_feedback = _decrypt_feedback_emails(feedback)
+    
+    return {"id": decrypted_feedback["id"], "url": decrypted_feedback["url"], "assessmentId": decrypted_feedback["assessmentId"],
+            "studentEmail": decrypted_feedback["studentEmail"], "performance": decrypted_feedback.get("performance"), "clarity": decrypted_feedback.get("clarity"),
+            "evaluativeJudgement": decrypted_feedback.get("evaluativeJudgement"), "personalise": decrypted_feedback.get("personalise"),
+            "usability": decrypted_feedback.get("usability"), "emotion": decrypted_feedback.get("emotion"),
+            "mark": decrypted_feedback.get("mark"), "unitCode": unit_code, "assessmentName": assessment_name,
+            "gptResponseRating": decrypted_feedback.get("gptResponseRating"), "gptQueryText": decrypted_feedback.get("gptQueryText"),
+            "gptResponse": decrypted_feedback.get("gptResponse"), "highlights": feedbackHighlights, }
 
 
 
 def get_feedbacks_by_user_email(email, db: Session):
-    # cached_units_data = unit_temp.get_data()
-    # if not cached_units_data:
-    #     cached_units_data = unit_temp.insert_data(get_all_units_with_assessments(db))
     cached_units_data = get_all_units_with_assessments(db)
+    
+    # Get all feedbacks for user using encrypted email search
+    all_feedbacks = db.query(Feedback).filter(Feedback.rowStatus == "ACTIVE").all()
+    user_feedbacks = []
+    
+    for feedback in all_feedbacks:
+        try:
+            decrypted_email = decrypt_field(feedback.studentEmail)
+            if decrypted_email == email:
+                user_feedbacks.append(feedback.id)
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if feedback.studentEmail == email:
+                user_feedbacks.append(feedback.id)
+    
+    if not user_feedbacks:
+        return None
+    
     query = (
         db.query(Feedback, Highlight, func.concat('[', func.group_concat(
             func.json_object(
@@ -329,7 +535,7 @@ def get_feedbacks_by_user_email(email, db: Session):
         ), ']').label('actionItems')).outerjoin(Highlight, (Feedback.id == Highlight.feedbackId) & (Highlight.rowStatus == "ACTIVE"))
             .outerjoin(AnnotationActionPoint, (Highlight.id == AnnotationActionPoint.highlightId) &
                        ((AnnotationActionPoint.rowStatus == "ACTIVE")))
-            .filter(Feedback.studentEmail == email, Feedback.rowStatus == "ACTIVE")
+            .filter(Feedback.id.in_(user_feedbacks), Feedback.rowStatus == "ACTIVE")
             .group_by(Feedback.id, Highlight.id))
 
     result = query.all()
@@ -339,12 +545,16 @@ def get_feedbacks_by_user_email(email, db: Session):
     
     for row in result:
         feedback, highlight, actionItems = row
+        
+        # Decrypt feedback data
+        decrypted_feedback = _decrypt_feedback_emails(feedback)
+        
         feedback_entry = feedbacks_dict.setdefault(feedback.id, {
-            "id": feedback.id, "url": feedback.url, "assessmentId": feedback.assessmentId,
-            "studentEmail": feedback.studentEmail, "mark": feedback.mark, 
-            "performance": feedback.performance, "clarity": feedback.clarity, "evaluativeJudgement": feedback.evaluativeJudgement, 
-            "personalise": feedback.personalise, "usability": feedback.usability, "emotion": feedback.emotion,
-            "furtherQuestions": feedback.furtherQuestions, "comment": feedback.comment,
+            "id": decrypted_feedback["id"], "url": decrypted_feedback["url"], "assessmentId": decrypted_feedback["assessmentId"],
+            "studentEmail": decrypted_feedback["studentEmail"], "mark": decrypted_feedback["mark"], 
+            "performance": decrypted_feedback.get("performance"), "clarity": decrypted_feedback.get("clarity"), "evaluativeJudgement": decrypted_feedback.get("evaluativeJudgement"), 
+            "personalise": decrypted_feedback.get("personalise"), "usability": decrypted_feedback.get("usability"), "emotion": decrypted_feedback.get("emotion"),
+            "furtherQuestions": decrypted_feedback.get("furtherQuestions"), "comment": decrypted_feedback.get("comment"),
             "highlights": []
         })
 
@@ -422,20 +632,24 @@ def get_feeedbacks_by_unitcode_assessment(unit_code, assessment_name, db: Sessio
 
     for row in result:
         feedback, assessment, highlight, actionItems = row
+        
+        # Decrypt feedback data
+        decrypted_feedback = _decrypt_feedback_emails(feedback)
+        
         feedback_entry = feedbacks_dict.setdefault(feedback.id, {
-            "id": feedback.id,
-            "url": feedback.url,
-            "assessmentId": feedback.assessmentId,
-            "studentEmail": feedback.studentEmail,
-            "mark": feedback.mark,
-            "performance": feedback.performance,
-            "clarity": feedback.clarity,
-            "evaluativeJudgement": feedback.evaluativeJudgement,
-            "personalise": feedback.personalise,
-            "usability": feedback.usability,
-            "emotion": feedback.emotion,
-            "furtherQuestions": feedback.furtherQuestions,
-            "comment": feedback.comment,
+            "id": decrypted_feedback["id"],
+            "url": decrypted_feedback["url"],
+            "assessmentId": decrypted_feedback["assessmentId"],
+            "studentEmail": decrypted_feedback["studentEmail"],
+            "mark": decrypted_feedback["mark"],
+            "performance": decrypted_feedback.get("performance"),
+            "clarity": decrypted_feedback.get("clarity"),
+            "evaluativeJudgement": decrypted_feedback.get("evaluativeJudgement"),
+            "personalise": decrypted_feedback.get("personalise"),
+            "usability": decrypted_feedback.get("usability"),
+            "emotion": decrypted_feedback.get("emotion"),
+            "furtherQuestions": decrypted_feedback.get("furtherQuestions"),
+            "comment": decrypted_feedback.get("comment"),
             "highlights": []
         })
 

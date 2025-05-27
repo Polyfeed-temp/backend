@@ -14,7 +14,7 @@ def create_request(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    return create_feedback_request(db, request, student_id=current_user.email)
+    return create_feedback_request(db, request, student_id=current_user['email'])
 
 @router.get("/", response_model=List[FeedbackRequestPydantic])
 def get_requests(
@@ -23,7 +23,7 @@ def get_requests(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    return get_feedback_requests(db, student_id=current_user.email, skip=skip, limit=limit)
+    return get_feedback_requests(db, student_id=current_user['email'], skip=skip, limit=limit)
 
 
 @router.get("/student/{email}", response_model=List[FeedbackRequestPydantic])
@@ -44,7 +44,7 @@ def get_request_by_assignment(
     current_user = Depends(get_current_user)
 ):
     """Get feedback request for a specific assignment"""
-    return get_feedback_request_by_assignment(db, assignment_id, current_user.email) 
+    return get_feedback_request_by_assignment(db, assignment_id, current_user['email']) 
 
 
 

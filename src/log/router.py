@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.post("/")
 def create_logs(item:Item, db: Session = Depends(get_db), user=Depends(get_current_user)): 
-    item.userEmail = user.email
+    item.userEmail = user['email']
     return create_log(db, item)
 
 @router.get("/")

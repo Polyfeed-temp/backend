@@ -17,9 +17,10 @@ router = APIRouter()
 
 @router.post("/")
 def create_highlight(highlight: CompleteHighlight, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    email = user.email
-    #check if feedback user match email
-    service.create_highlight(db, highlight)
+    result = service.create_highlight(db, highlight, user['email'])
+    if result is None:
+        raise HTTPException(status_code=403, detail="You can only create highlights on your own feedback")
+    return {"message": "Highlight created successfully"}
 
 
 
@@ -31,13 +32,18 @@ def get_highlights(db: Session = Depends(get_db)):
 @router.get("/tags", response_model=List[str])
 def get_highlight_tags(db: Session = Depends(get_db)):
     return service.get_highlight_tags(db)
+
 @router.patch("/{highlight_id}/notes")
 def update_highlight_notes_route(highlight_id,notes:str, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    highligh =service.update_highlight_notes(db, highlight_id, notes)
-    if not highligh:
-        raise HTTPException(status_code=404, detail="Highlight not found")
-    return highligh
+    highlight = service.update_highlight_notes(db, highlight_id, notes, user['email'])
+    if not highlight:
+        raise HTTPException(status_code=404, detail="Highlight not found or you don't have permission to modify it")
+    return highlight
+
 @router.delete("/{highlight_id}", response_model=bool)
 def delete_highlight(highlight_id: str, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    return service.delete_highlight(db, highlight_id)
+    result = service.delete_highlight(db, highlight_id, user['email'])
+    if not result:
+        raise HTTPException(status_code=404, detail="Highlight not found or you don't have permission to delete it")
+    return result
 

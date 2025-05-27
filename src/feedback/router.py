@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.post("/", response_model=FeedbackBasePydantic)
 def create_feedback_route(feedback:FeedbackBasePydantic, db: Session = Depends(get_db), user = Depends(get_current_user)):
-    feedback.studentEmail = user.email
+    feedback.studentEmail = user['email']
     return create_feedback(feedback, db)
 
 # @router.get("/{feedbackId}", response_model=List[HighlightPydantic])

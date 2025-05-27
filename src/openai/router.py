@@ -25,10 +25,24 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
     query = prompt_one.replace("feedback_text_prompt", content.content)
 
     if content.attemptTime == 2:
-        updated_feedback = db.query(Feedback.gptResponse, Feedback.gptQueryText).filter(
-            Feedback.id == feedback_id,
-            Feedback.studentEmail == user.email
-        ).first()
+        # Find feedback by ID and verify ownership using encrypted email search
+        feedback_obj = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+        if not feedback_obj:
+            updated_feedback = None
+        else:
+            try:
+                from src.user.encryption import decrypt_field
+                decrypted_email = decrypt_field(feedback_obj.studentEmail)
+                if decrypted_email == user['email']:
+                    updated_feedback = (feedback_obj.gptResponse, feedback_obj.gptQueryText)
+                else:
+                    updated_feedback = None
+            except:
+                # If decryption fails, check if it's already unencrypted
+                if feedback_obj.studentEmail == user['email']:
+                    updated_feedback = (feedback_obj.gptResponse, feedback_obj.gptQueryText)
+                else:
+                    updated_feedback = None
         if updated_feedback:
             gpt_response,gptQueryText = updated_feedback
             query = prompt_two.replace("feedback_text_prompt", gpt_response)
@@ -37,19 +51,24 @@ def explain_further(feedback_id: int,content:ExplainFutherContentPydantic, db: S
     if response:
         try:
             
-            # Update the Feedback entry
-            if content.attemptTime == 1:
-                db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
-                    {
-                        Feedback.gptResponse: response.content,
-                        Feedback.gptQueryText: content.content
-                    }, synchronize_session='fetch')
-            else:
-                db.query(Feedback).filter(Feedback.id == feedback_id,Feedback.studentEmail == user.email).update(
-                    {
-                        Feedback.gptResponse_2: response.content,
-                        Feedback.gptQueryText_2: content.content
-                    }, synchronize_session='fetch')
+            # Update the Feedback entry - verify ownership first
+            feedback_to_update = db.query(Feedback).filter(Feedback.id == feedback_id).first()
+            if feedback_to_update:
+                try:
+                    from src.user.encryption import decrypt_field
+                    decrypted_email = decrypt_field(feedback_to_update.studentEmail)
+                    user_owns_feedback = (decrypted_email == user['email'])
+                except:
+                    # If decryption fails, check if it's already unencrypted
+                    user_owns_feedback = (feedback_to_update.studentEmail == user['email'])
+                
+                if user_owns_feedback:
+                    if content.attemptTime == 1:
+                        feedback_to_update.gptResponse = response.content
+                        feedback_to_update.gptQueryText = content.content
+                    else:
+                        feedback_to_update.gptResponse_2 = response.content
+                        feedback_to_update.gptQueryText_2 = content.content
             
             db.commit()
             
@@ -65,17 +84,42 @@ def explain_further(db: Session = Depends(get_db), user=Depends(get_current_user
     data_input = ""
     list_input = ""
 
-    # Query to get only highlight ID and text where the feedback belongs to the logged-in user
-    commonThemes = db.query(Highlight.commonTheme)\
-                     .join(Feedback, Feedback.id == Highlight.feedbackId)\
-                     .filter((Feedback.studentEmail != user.email) & (Highlight.commonTheme.isnot(None)))\
-                     .all()
+    # Get all highlights and filter by decrypted email
+    from src.user.encryption import decrypt_field
+    
+    # Get common themes from other users' feedback
+    all_highlights_with_themes = db.query(Highlight.commonTheme, Feedback.studentEmail)\
+                                   .join(Feedback, Feedback.id == Highlight.feedbackId)\
+                                   .filter(Highlight.commonTheme.isnot(None))\
+                                   .all()
+    
+    commonThemes = []
+    for theme, encrypted_email in all_highlights_with_themes:
+        try:
+            decrypted_email = decrypt_field(encrypted_email)
+            if decrypted_email != user['email']:
+                commonThemes.append((theme,))
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if encrypted_email != user['email']:
+                commonThemes.append((theme,))
 
-    # Query to get only highlight ID and text where the feedback belongs to the logged-in user
-    highlights = db.query(Highlight.id, Highlight.text, Highlight.commonTheme)\
-                   .join(Feedback, Feedback.id == Highlight.feedbackId)\
-                   .filter((Feedback.studentEmail == user.email) & (Highlight.commonTheme == None))\
-                   .all()
+    # Get user's highlights without common themes
+    all_user_highlights = db.query(Highlight.id, Highlight.text, Highlight.commonTheme, Feedback.studentEmail)\
+                            .join(Feedback, Feedback.id == Highlight.feedbackId)\
+                            .filter(Highlight.commonTheme == None)\
+                            .all()
+    
+    highlights = []
+    for highlight_id, text, common_theme, encrypted_email in all_user_highlights:
+        try:
+            decrypted_email = decrypt_field(encrypted_email)
+            if decrypted_email == user['email']:
+                highlights.append((highlight_id, text, common_theme))
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if encrypted_email == user['email']:
+                highlights.append((highlight_id, text, common_theme))
     
     if len(highlights) == 0:
         return True

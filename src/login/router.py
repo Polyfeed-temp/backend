@@ -25,7 +25,7 @@ async def login_for_access_token(response: Response,form_data: Annotated[OAuth2P
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user['email']}, expires_delta=access_token_expires
     )
 
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite='none')

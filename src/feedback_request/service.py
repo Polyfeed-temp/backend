@@ -3,6 +3,7 @@ from .models import FeedbackRequest
 from .schemas import FeedbackRequestPydantic
 from src.openai.service import explain_further
 from src.assessment.models import Assessment
+from src.user.encryption import encrypt_field, decrypt_field
 import json
 
 def get_existing_feedback_requests(db: Session, assignment_id: int):
@@ -168,14 +169,69 @@ def generate_ai_feedback(db: Session, rubric_items, assignment_id: int):
         # Return a simple JSON array as fallback
         return json.dumps([{"error": "Failed to parse AI response"}])
 
+def _encrypt_feedback_request_emails(data: dict) -> dict:
+    """Encrypt email fields in feedback request data before storage."""
+    encrypted_data = data.copy()
+    
+    # Encrypt student_id field (which contains email)
+    if 'student_id' in encrypted_data and encrypted_data['student_id']:
+        encrypted_data['student_id'] = encrypt_field(encrypted_data['student_id'])
+    
+    return encrypted_data
+
+def _decrypt_feedback_request_emails(feedback_request_obj) -> dict:
+    """Decrypt email fields when retrieving feedback request from database."""
+    if hasattr(feedback_request_obj, '__dict__'):
+        # Convert SQLAlchemy object to dict
+        data_dict = {column.name: getattr(feedback_request_obj, column.name) for column in feedback_request_obj.__table__.columns}
+    elif hasattr(feedback_request_obj, '_asdict'):
+        # SQLAlchemy Row object
+        data_dict = feedback_request_obj._asdict()
+    elif hasattr(feedback_request_obj, 'keys'):
+        # Dict-like object
+        data_dict = dict(feedback_request_obj)
+    else:
+        # Convert to dict manually
+        data_dict = {}
+        for key in dir(feedback_request_obj):
+            if not key.startswith('_'):
+                try:
+                    data_dict[key] = getattr(feedback_request_obj, key)
+                except:
+                    pass
+    
+    # Decrypt student_id field
+    if 'student_id' in data_dict and data_dict['student_id']:
+        try:
+            data_dict['student_id'] = decrypt_field(data_dict['student_id'])
+        except:
+            pass  # If decryption fails, keep original value
+    
+    return data_dict
+
+def _find_feedback_request_by_encrypted_email(db: Session, email: str, assignment_id: int = None) -> FeedbackRequest:
+    """Find feedback request by searching through encrypted emails."""
+    query = db.query(FeedbackRequest)
+    if assignment_id:
+        query = query.filter(FeedbackRequest.assignmentId == assignment_id)
+    
+    requests = query.all()
+    
+    for request in requests:
+        try:
+            decrypted_email = decrypt_field(request.student_id)
+            if decrypted_email == email:
+                return request
+        except:
+            # If decryption fails, check if it's already unencrypted
+            if request.student_id == email:
+                return request
+    
+    return None
+
 def create_feedback_request(db: Session, request: FeedbackRequestPydantic, student_id: str):
-    # Check if request already exists for this assignment and student
-    existing_request = db.query(FeedbackRequest)\
-        .filter(
-            FeedbackRequest.assignmentId == request.assignmentId,
-            FeedbackRequest.student_id == student_id
-        )\
-        .first()
+    # Check if request already exists for this assignment and student using encrypted search
+    existing_request = _find_feedback_request_by_encrypted_email(db, student_id, request.assignmentId)
 
     # Generate AI feedback
     print("request.rubricItems", request.rubricItems)
@@ -197,52 +253,75 @@ def create_feedback_request(db: Session, request: FeedbackRequestPydantic, stude
         db.commit()
         db.refresh(existing_request)
         
+        # Decrypt data for response
+        decrypted_request = _decrypt_feedback_request_emails(existing_request)
+        
         response = FeedbackRequestPydantic(
-            id=existing_request.id,
-            assignmentId=existing_request.assignmentId,
+            id=decrypted_request["id"],
+            assignmentId=decrypted_request["assignmentId"],
             rubricItems=existing_request.get_rubric_items(),
-            AI_RubricItem=existing_request.AI_RubricItem,
-            student_id=existing_request.student_id
+            AI_RubricItem=decrypted_request["AI_RubricItem"],
+            student_id=decrypted_request["student_id"]
         )
         return response
     else:
-        # Create new request
+        # Create new request with encrypted data
+        encrypted_data = _encrypt_feedback_request_emails({'student_id': student_id})
+        
         new_request = FeedbackRequest(
             assignmentId=request.assignmentId,
             rubricItems=json.dumps(rubric_items_dict),
             AI_RubricItem=ai_rubric_response,
-            student_id=student_id
+            student_id=encrypted_data['student_id']
         )
         
         db.add(new_request)
         db.commit()
         db.refresh(new_request)
         
+        # Decrypt data for response
+        decrypted_request = _decrypt_feedback_request_emails(new_request)
+        
         response = FeedbackRequestPydantic(
-            id=new_request.id,
-            assignmentId=new_request.assignmentId,
+            id=decrypted_request["id"],
+            assignmentId=decrypted_request["assignmentId"],
             rubricItems=new_request.get_rubric_items(),
-            AI_RubricItem=new_request.AI_RubricItem,
-            student_id=new_request.student_id
+            AI_RubricItem=decrypted_request["AI_RubricItem"],
+            student_id=decrypted_request["student_id"]
         )
         return response
 
 def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: int = 100):
-    requests = db.query(FeedbackRequest, Assessment)\
+    # Get all requests and filter by decrypted email
+    all_requests = db.query(FeedbackRequest, Assessment)\
         .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
-        .filter(FeedbackRequest.student_id == student_id)\
         .offset(skip)\
-        .limit(limit)\
+        .limit(limit * 10)\
         .all()
     
     result = []
-    for req, assessment in requests:
+    count = 0
+    
+    for req, assessment in all_requests:
+        if count >= limit:
+            break
+            
+        try:
+            decrypted_email = decrypt_field(req.student_id)
+            email_matches = (decrypted_email == student_id)
+        except:
+            # If decryption fails, check if it's already unencrypted
+            email_matches = (req.student_id == student_id)
+        
+        if email_matches:
+            decrypted_request = _decrypt_feedback_request_emails(req)
+            
         feedback_request = FeedbackRequestPydantic(
-            id=req.id,
-            assignmentId=req.assignmentId,
+                id=decrypted_request["id"],
+                assignmentId=decrypted_request["assignmentId"],
             rubricItems=req.get_rubric_items(),
-            AI_RubricItem=req.AI_RubricItem,
-            student_id=req.student_id,
+                AI_RubricItem=decrypted_request["AI_RubricItem"],
+                student_id=decrypted_request["student_id"],
             assessment={
                 "id": assessment.id,
                 "name": assessment.assessmentName,
@@ -250,30 +329,32 @@ def get_feedback_requests(db: Session, student_id: str, skip: int = 0, limit: in
             }
         )
         result.append(feedback_request)
+            count += 1
     
     return result
 
 def get_feedback_request_by_assignment(db: Session, assignment_id: int, student_id: str):
     """Get a single feedback request for a specific assignment and student"""
-    result = db.query(FeedbackRequest, Assessment)\
-        .join(Assessment, FeedbackRequest.assignmentId == Assessment.id)\
-        .filter(
-            FeedbackRequest.assignmentId == assignment_id,
-            FeedbackRequest.student_id == student_id
-        )\
-        .first()
+    # Find request using encrypted email search
+    request = _find_feedback_request_by_encrypted_email(db, student_id, assignment_id)
     
-    if not result:
+    if not request:
         return None
     
-    request, assessment = result
+    # Get assessment info
+    assessment = db.query(Assessment).filter(Assessment.id == assignment_id).first()
+    if not assessment:
+        return None
+    
+    # Decrypt request data
+    decrypted_request = _decrypt_feedback_request_emails(request)
         
     return FeedbackRequestPydantic(
-        id=request.id,
-        assignmentId=request.assignmentId,
+        id=decrypted_request["id"],
+        assignmentId=decrypted_request["assignmentId"],
         rubricItems=request.get_rubric_items(),
-        AI_RubricItem=request.AI_RubricItem,
-        student_id=request.student_id,
+        AI_RubricItem=decrypted_request["AI_RubricItem"],
+        student_id=decrypted_request["student_id"],
         assessment={
             "id": assessment.id,
             "name": assessment.assessmentName,
@@ -301,12 +382,15 @@ def get_feedback_request_by_unitcode_assessment(db: Session, unit_code: str, ass
     
     feedback_requests = []
     for request, assessment in results:
+        # Decrypt request data
+        decrypted_request = _decrypt_feedback_request_emails(request)
+        
         feedback_requests.append(FeedbackRequestPydantic(
-            id=request.id,
-            assignmentId=request.assignmentId,
+            id=decrypted_request["id"],
+            assignmentId=decrypted_request["assignmentId"],
             rubricItems=request.get_rubric_items(),
-            AI_RubricItem=request.AI_RubricItem,
-            student_id=request.student_id,
+            AI_RubricItem=decrypted_request["AI_RubricItem"],
+            student_id=decrypted_request["student_id"],
             assessment={
                 "id": assessment.id,
                 "name": assessment.assessmentName,
