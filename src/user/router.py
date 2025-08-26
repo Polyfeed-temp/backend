@@ -1,5 +1,5 @@
 from typing import List, Union
-from .schemas import UserPydantic, EnrolledUnitPydantic
+from .schemas import UserPydantic, EnrolledUnitPydantic, UserSignupRequest
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
@@ -16,11 +16,13 @@ def get_users(db: Session = Depends(get_db)):
 
 
 @router.post("/signup", response_model=UserPydantic)
-def signup(user: UserPydantic, db: Session = Depends(get_db)):
+def signup(user: UserSignupRequest, db: Session = Depends(get_db)):
 
-    user =service.signup_user(db, user)
-    if(user):
-        return user
+    result = service.signup_user(db, user)
+    if result:
+        return result
+    elif result is None:
+        raise HTTPException(status_code=400, detail="Email and password are required and cannot be empty")
     else:
         raise HTTPException(status_code=409, detail="User already exists")
 

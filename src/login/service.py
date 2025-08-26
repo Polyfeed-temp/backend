@@ -13,13 +13,6 @@ SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import auth
-
-cred = credentials.Certificate(
-    "src/northern-audio-405809-firebase-adminsdk-myq2f-41e88bfe44.json")
-app = firebase_admin.initialize_app(cred)
 
 
 class UserResponse(BaseModel):
@@ -75,14 +68,18 @@ async def get_current_user(req: Request, db: Session = Depends(get_db)):
     )
 
     token = req.headers.get("Authorization")
-
+    if token and token.startswith("Bearer "):
+        token = token[7:]
+    
+    if not token:
+        token = req.cookies.get("access_token")
+    
     if not token:
         raise credentials_exception
 
     try:
-        decoded_token = auth.verify_id_token(token)
-        email = decoded_token.get('email')
-
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
         if email is None:
             raise credentials_exception
     except JWTError:

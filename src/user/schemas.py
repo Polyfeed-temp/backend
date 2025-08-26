@@ -16,6 +16,13 @@ class UserPydantic(BaseModel):
     password: Optional[str]= None
     faculty: Faculty
 
+class UserSignupRequest(BaseModel):
+    email: str
+    password: str
+    firstName: str
+    lastName: str
+    monashId: Optional[str] = None
+
 class AssessmentPydantic(BaseModel):
     id: int
     assessmentName: str

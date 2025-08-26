@@ -34,16 +34,48 @@ def create_user(db: Session, userData: UserPydantic):
     return db_user
 
 
-def signup_user(db: Session, userData: UserPydantic):
-    db_user = db.query(User).filter(User.email == userData.email).all()
-    if len(db_user) == 1:
-        return False
+def signup_user(db: Session, signupData):
+    from .enums import Role, Faculty
+    from .schemas import UserPydantic
+    
+    # Check if email and password are provided and not empty FIRST
+    if not signupData.email or signupData.email.strip() == "":
+        return None
+    if not signupData.password or signupData.password.strip() == "":
+        return None
+    
+    # Check if user exists with password
+    db_user_with_password = db.query(User).filter(User.email == signupData.email, User.password != None, User.password != "").all()
+    if len(db_user_with_password) == 1:
+        return False  # User already exists with password
+    
+    # Check if user exists without password
+    db_user_no_password = db.query(User).filter(User.email == signupData.email, (User.password == None) | (User.password == "")).first()
+    if db_user_no_password:
+        # Update existing user's password
+        db_user_no_password.password = get_password_hash(signupData.password)
+        db_user_no_password.firstName = signupData.firstName
+        db_user_no_password.lastName = signupData.lastName
+        if signupData.monashId:
+            db_user_no_password.monashId = signupData.monashId
+        db.commit()
+        db.refresh(db_user_no_password)
+        return db_user_no_password
     else:
-        # hash the password
-        userData.password = get_password_hash(userData.password)
-        userData.role = userData.role.value
-        userData.faculty = userData.faculty.value
-        userData.monashObjectId = None
+        
+        # Create full user data with defaults
+        userData = UserPydantic(
+            email=signupData.email,
+            password=get_password_hash(signupData.password),
+            firstName=signupData.firstName,
+            lastName=signupData.lastName,
+            monashId=signupData.monashId,
+            role=Role.Student,
+            faculty=Faculty.Engineering,
+            authcate="local",
+            monashObjectId=None
+        )
+        
         return create_user(db, userData)
 
 

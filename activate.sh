@@ -25,9 +25,8 @@ if [ ! -d "$VENV_NAME" ]; then
     # Activate the virtual environment
     source $VENV_NAME/bin/activate
     
-    echo -e "${BLUE}Installing required packages...${NC}"
-    pip install playwright
-    python -m playwright install
+    echo -e "${BLUE}Installing required packages from requirements.txt...${NC}"
+    pip install -r requirements.txt
     
     echo -e "${GREEN}All dependencies installed successfully!${NC}"
 else
@@ -36,8 +35,9 @@ else
 fi
 
 echo -e "${GREEN}Virtual environment is now active.${NC}"
-echo -e "${YELLOW}You can now run your script with:${NC} python cityline_bypass.py"
-echo -e "${YELLOW}When done, run:${NC} ./deactivate.sh"
+echo -e "${YELLOW}You can now run your FastAPI server with:${NC} python -m uvicorn src.main:app --reload"
+echo -e "${YELLOW}Or run the server script with:${NC} python server.py"
+echo -e "${YELLOW}When done, run:${NC} deactivate"
 echo ""
 echo -e "${GREEN}Your prompt should now show ($VENV_NAME) at the beginning.${NC}"
 
