@@ -13,19 +13,38 @@ SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+import os
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
 
-cred = credentials.Certificate(
-    "src/northern-audio-405809-firebase-adminsdk-myq2f-41e88bfe44.json")
-app = firebase_admin.initialize_app(cred)
+# Initialize Firebase Admin SDK only if certificate exists
+firebase_initialized = False
+firebase_cert_path = "src/northern-audio-405809-firebase-adminsdk-myq2f-41e88bfe44.json"
+
+if os.path.exists(firebase_cert_path):
+    cred = credentials.Certificate(firebase_cert_path)
+    app = firebase_admin.initialize_app(cred)
+    firebase_initialized = True
+else:
+    # Try to initialize with environment variables or default credentials
+    try:
+        # For production, you might use Application Default Credentials
+        app = firebase_admin.initialize_app()
+        firebase_initialized = True
+    except Exception:
+        # Firebase not configured - will handle in verify_firebase_token
+        pass
 
 
 def verify_firebase_token(id_token: str):
     """
     Verify Firebase ID token and return user email
     """
+    if not firebase_initialized:
+        print("Firebase not initialized - token verification unavailable")
+        return None
+        
     try:
         decoded_token = auth.verify_id_token(id_token)
         email = decoded_token.get('email')
@@ -42,9 +61,25 @@ class UserResponse(BaseModel):
 
 
 def authenticate_user(db: Session, email: str, password: str):
-    user = get_user_by_email(db, email, no_password=True)
+    user = get_user_by_email(db, email)
     if not user:
         return False
+    
+    # Check if user uses local authentication (has password)
+    # Firebase users authenticate via Firebase tokens, not passwords
+    if hasattr(user, 'authcate') and user.authcate != 'local':
+        # For non-local auth (Firebase, OAuth, etc.), we shouldn't use this method
+        # They should authenticate through their respective providers
+        return False
+    
+    # For local users, verify the password
+    if not hasattr(user, 'password') or user.password is None:
+        # User doesn't have a password set
+        return False
+        
+    if not verify_password(password, user.password):
+        return False
+    
     return user
 
 

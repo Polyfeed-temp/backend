@@ -3,7 +3,7 @@ from enum import Enum
 from sqlalchemy.orm import Session
 from .models import User
 from .schemas import UserPydantic
-from src.dependencies import get_password_hash
+from src.dependencies import get_password_hash, verify_password
 from src.unit.models import Unit
 from src.assessment.models import Assessment
 from src.enrollment.models import Enrollment
@@ -129,5 +129,32 @@ def get_student_all_student_enrolled_units(db: Session, student_email: str):
         units[unitCode]['assessments'].append({'assessmentName': assessmentName, 'id': assessmentId})
 
     return list(units.values())
+
+
+def reset_password(db: Session, email: str, old_password: str, new_password: str):
+    # Get user with password
+    db_user = get_user_by_email(db, email, no_password=False)
+    
+    if not db_user:
+        return {"success": False, "message": "User not found"}
+    
+    # Check if user has a password set
+    if not db_user.password:
+        return {"success": False, "message": "User does not have a password set"}
+    
+    # Verify old password
+    if not verify_password(old_password, db_user.password):
+        return {"success": False, "message": "Incorrect old password"}
+    
+    # Check if new password is same as old password
+    if verify_password(new_password, db_user.password):
+        return {"success": False, "message": "New password cannot be the same as old password"}
+    
+    # Update password
+    db_user.password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(db_user)
+    
+    return {"success": True, "message": "Password reset successful"}
 
 

@@ -1,5 +1,5 @@
 from typing import List, Union
-from .schemas import UserPydantic, EnrolledUnitPydantic, UserSignupRequest
+from .schemas import UserPydantic, EnrolledUnitPydantic, UserSignupRequest, PasswordResetRequest
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
@@ -29,6 +29,25 @@ def signup(user: UserSignupRequest, db: Session = Depends(get_db)):
 @router.post("/create", response_model=UserPydantic)
 def create_user(user: UserPydantic, db: Session = Depends(get_db)):
     return service.create_user(db, user)
+
+
+@router.post("/reset-password")
+def reset_password(
+    password_reset: PasswordResetRequest,
+    current_user: UserPydantic = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    result = service.reset_password(
+        db, 
+        current_user.email, 
+        password_reset.old_password, 
+        password_reset.new_password
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    return {"message": result["message"]}
 
 
 #

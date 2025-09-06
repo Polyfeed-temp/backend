@@ -29,3 +29,7 @@ class AssessmentPydantic(BaseModel):
 class EnrolledUnitPydantic(BaseModel):
     unitCode: str
     assessments: List[AssessmentPydantic]
+
+class PasswordResetRequest(BaseModel):
+    old_password: str
+    new_password: str
