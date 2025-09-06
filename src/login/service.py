@@ -21,7 +21,8 @@ class UserResponse(BaseModel):
 
 
 def authenticate_user(db: Session, email: str, password: str):
-    user = get_user_by_email(db, email)
+    # Get user with password field included
+    user = get_user_by_email(db, email, no_password=False)
     if not user:
         return False
     
