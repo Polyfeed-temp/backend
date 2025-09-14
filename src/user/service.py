@@ -56,8 +56,7 @@ def signup_user(db: Session, signupData):
         db_user_no_password.password = get_password_hash(signupData.password)
         db_user_no_password.firstName = signupData.firstName
         db_user_no_password.lastName = signupData.lastName
-        if signupData.monashId:
-            db_user_no_password.monashId = signupData.monashId
+        db_user_no_password.monashId = None
         db.commit()
         db.refresh(db_user_no_password)
         return db_user_no_password
@@ -69,10 +68,10 @@ def signup_user(db: Session, signupData):
             password=get_password_hash(signupData.password),
             firstName=signupData.firstName,
             lastName=signupData.lastName,
-            monashId=signupData.monashId,
+            monashId=None,
             role=Role.Student,
             faculty=Faculty.Engineering,
-            authcate="local",
+            authcate=f"local_{signupData.email}",
             monashObjectId=None
         )
         
