@@ -25,12 +25,15 @@ config = Config('.env')
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
-app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cast=str))
 
-app.add_middleware(CORSMiddleware,  allow_origins=["*"],
+app.add_middleware(CORSMiddleware,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS", "DELETE", "PATCH"],
-    allow_headers=["Content-Type","Set-Cookie", "Authorization"])
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"])
+
+app.add_middleware(SessionMiddleware, secret_key=config('RANDOM_SECRET_KEY', cast=str))
 
 app.body_limit = 100 * 1024 * 1024  # 100MB in bytes
 
